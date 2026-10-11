@@ -33,6 +33,119 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 - Top-K: `ceil(n × fraction)`, unrounded scores, descending stable sort, original row order for ties.
 - Test is reserved for Stage 6. Earlier EDA inspected aggregate Test information, so it is not described as completely unseen, but it is excluded from development decisions.
 
+## Stage 1 — Problem Definition
+
+### Objective and Decisions
+
+- Business problem: prioritize planned outbound marketing contacts when contact capacity is limited.
+- Prediction objective: rank campaign records by the positive-class score for term-deposit subscription.
+- Prediction time: immediately before the planned contact attempt.
+- Unit of analysis: one campaign record, not a verified unique customer.
+- Intended use: decision support for ranking an already eligible contact population.
+- Prohibited interpretations: do not claim causal contact uplift, profitability, or verified absolute subscription probabilities from the predictive scores.
+- Technical success: reproducible leakage-safe development, AP-led model selection, and supporting ROC-AUC and Top-K evaluation.
+- Business acceptance remains undefined because contact costs, conversion value, eligibility constraints, and operational capacity are unavailable.
+
+### Evidence and Limitations
+
+- Primary evidence: `README.md` Sections 1–4.
+- The dataset represents historically contacted records and may not generalize to a different eligible population.
+- No unique customer identifier is available, so ranking and later monitoring remain record-based.
+- Exact operational contact schedules and financial thresholds cannot be reconstructed from the dataset.
+
+## Stage 2 — Data Understanding
+
+### Data and Quality Findings
+
+| Item | Finding |
+|---|---|
+| Source | UCI `bank-additional-full.csv`, semicolon-delimited and documented as date ordered |
+| Shape | 41,188 rows, 20 original predictors, and target `y` |
+| Missing values | No pandas-recognized missing values in Train |
+| Literal unknowns | `default` is approximately 25.33% `"unknown"` in Train; unknowns are retained as categories |
+| Exact duplicates | Nine exact duplicate Train rows; retained because erroneous duplication is not established |
+| Target prevalence | Train 5.57%; Validation 13.86%, indicating material temporal/prevalence shift |
+| Skew and sparsity | `campaign` is right-skewed; `previous` is zero for approximately 96.52% of Train |
+| Previous-contact history | Only 53 Train rows have `pdays != 999`; 949 rows have `previous > 0` with `pdays = 999` |
+| Correlation | `emp.var.rate` and `euribor3m` have approximately 0.95 Train correlation |
+
+### Leakage and Split Decisions
+
+- Exclude `duration`; it is only known after the current contact.
+- Retain `contact` and `campaign` under the documented pre-contact availability assumptions.
+- Retain all other candidate predictors; do not remove features based only on EDA association or correlation.
+- Preserve source row order and use boundaries `28,831` and `37,069` for the 70/20/10 split.
+- Do not shuffle, stratify, or reconstruct dates from `month` and `day_of_week`.
+- Detailed EDA uses Train. Development-period aggregate diagnostics may use Validation.
+- Historical aggregate Test inspection remains disclosed, but Test is excluded from subsequent development decisions.
+
+### Interpretation and Limitations
+
+- Subscription-rate differences and feature associations are descriptive, not causal.
+- Strong macroeconomic correlations may complicate coefficient interpretation but do not independently justify feature removal.
+- The history variables contain related but non-equivalent information; do not overwrite or infer corrected `pdays` values.
+- Missing client identifiers prevent an audit of repeated customers or cross-split customer overlap.
+- Incomplete timestamps prevent verification of exact calendar boundaries and point-in-time macroeconomic publication availability.
+
+Primary evidence: `notebooks/01-data-understanding.ipynb`. These are stored Notebook findings; Stage 2 was not rerun during the current documentation update.
+
+## Stage 3 — Data Preprocessing
+
+### Frozen Baseline Representation
+
+- Modeling inputs: 19 predictors after excluding target `y` and `duration`.
+- Numeric branch: `StandardScaler` on eight numerical predictors plus raw `pdays`.
+- Categorical branch: `OneHotEncoder(handle_unknown="ignore")` on ten categorical predictors.
+- Preserve literal `"unknown"` values as observed categories.
+- Do not add imputation because the inspected development inputs contain no recognized missing values.
+- Do not initially apply clipping, winsorization, log transforms, rare-category merging, outlier removal, or correlation-based deletion.
+- Fit preprocessing on Train only and transform Validation without refitting.
+- Leave unspecified columns dropped by the `ColumnTransformer`.
+
+### Stored Validation Checks
+
+- Chronological boundaries, feature/target alignment, and complete non-overlapping feature groups were checked.
+- Binary target encoding uses `no = 0` and `yes = 1`.
+- Transformed Train and Validation matrices have consistent width and contain no NaN or infinite values.
+- The fitted representation produces 61 transformed features: nine numeric outputs and 52 one-hot outputs.
+- A synthetic unseen job category transforms successfully without changing output width.
+- Test was partitioned to preserve boundaries but was not transformed or used to fit preprocessing.
+
+Primary evidence: `notebooks/02-preprocessing.ipynb`. These are stored Notebook results; Stage 3 was not rerun during the current documentation update.
+
+## Stage 4 — Baseline Modeling
+
+### Configuration
+
+- Full scikit-learn `Pipeline`: baseline `ColumnTransformer` followed by `LogisticRegression(max_iter=1000)`.
+- All preprocessing statistics and model coefficients are fitted on Train only.
+- Positive-class probabilities rank Validation records; no hard-label threshold is selected.
+- Test remains excluded from training, prediction, and evaluation.
+
+### Validation Results
+
+| Metric | Result |
+|---|---:|
+| Average Precision | 0.297231 |
+| ROC-AUC | 0.692923 |
+| Validation prevalence | 0.138626 |
+
+| Capacity | K | Captured positives | Precision@K | Recall@K | Lift@K |
+|---|---:|---:|---:|---:|---:|
+| Top 5% | 412 | 177 | 0.429612 | 0.154991 | 3.099072 |
+| Top 10% | 824 | 318 | 0.385922 | 0.278459 | 2.783913 |
+| Top 20% | 1,648 | 503 | 0.305218 | 0.440455 | 2.201742 |
+
+### Interpretation and Limitations
+
+- The baseline provides a simple, maintainable ranking reference for Stage 5.
+- Logistic Regression does not automatically capture nonlinear numeric effects or complex interactions.
+- AP and Top-K metrics are sensitive to the higher Validation prevalence and temporal shift.
+- Whole-period Top-K evaluation does not simulate daily capacity, repeat-contact rules, or unique-customer constraints.
+- Scores are used for ranking; probability calibration and causal business impact are not established.
+
+Primary evidence: `notebooks/03-baseline-modeling.ipynb`. The core AP, ROC-AUC, and Top-K results were reproduced in the Stage 5 Fresh Kernel run.
+
 ## Stage 5 — Model Experiments
 
 ### Objective and Method
