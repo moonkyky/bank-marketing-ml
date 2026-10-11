@@ -215,7 +215,7 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 | Test isolation | Passed | Development prefix only loaded; final notebook assertion/output records no Test use |
 | Existing unit tests | Passed | `uv run pytest`: 1 passed |
 | Stage 5 notebook lint / format | Passed | `uv run ruff check notebooks/04-model-experiments.ipynb`; `uv run ruff format --check notebooks/04-model-experiments.ipynb` |
-| Repository-wide lint | Failed on pre-existing files | Existing issues remain in notebooks `01`, `03`, and `scripts/download_data.py`; they were not modified in Stage 5 |
+| Repository-wide lint | Passed | `uv run ruff check .` after focused import cleanup in notebooks `01`, `03`, and `scripts/download_data.py` |
 
 ## Next Handoff — Stage 6
 

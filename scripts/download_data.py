@@ -2,7 +2,6 @@ from pathlib import Path
 from urllib.request import urlretrieve
 from zipfile import ZipFile
 
-
 DATA_URL = "https://archive.ics.uci.edu/static/public/222/bank+marketing.zip"
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
