@@ -91,19 +91,19 @@ Detailed inspection and EDA belong in `notebooks/01-data-understanding.ipynb`.
 
 ### 3.2 Feature Availability at Prediction Time
 
-The intended decision is made **before a planned contact**, so only information actually available at that moment is admissible. The current modeling setup relies on the following assumptions, which must be revalidated before deployment:
+The intended decision is made **before a planned contact**, so only information available at that moment is admissible. The project uses the following feature-availability policy. Operational data contracts, especially point-in-time availability of macroeconomic data, must still be verified before deployment:
 
 | Features | Working assumption or restriction |
 |---|---|
 | Customer attributes | Available before the contact |
 | `pdays`, `previous`, `poutcome` | Refer to prior campaign history available before the current contact |
 | `month`, `day_of_week` | The planned contact date is known when scoring |
-| `campaign` | The intended contact-attempt count is known at scoring time; verify how the raw field is recorded |
-| `contact` | The contact channel is decided before scoring |
+| `campaign` | Retained: the current campaign contact count for the client is treated as the current planned attempt number and is known at scoring time |
+| `contact` | Retained: the communication channel is decided before scoring |
 | Macroeconomic indicators | Values were published and available at scoring time; verify publication lags and revisions |
 | `duration` | **Excluded**: current-call duration is unavailable before the call |
 
-Keeping `duration` in the raw dataset for inspection does not make it an eligible model input. Any change in the prediction point, data source, or campaign workflow requires a new feature-availability review.
+Keeping `duration` in the raw dataset for inspection does not make it an eligible model input. The retained `campaign` feature may reflect the historical contact policy, so a material change in campaign workflow can cause distribution shift and requires a new feature-availability review.
 
 ## 4. Data Splitting and Evaluation Protocol
 
@@ -225,7 +225,7 @@ Keep data locations, dependency versions, preprocessing decisions, model setting
 - The data lacks full contact timestamps; exact day boundaries and operational contact schedules cannot be reconstructed.
 - A single chronological validation period does not establish performance across every future period.
 - Historical contacted-customer outcomes may not generalize to an entirely different eligible customer pool.
-- Prediction-time availability of several campaign and macroeconomic features remains an assumption.
+- Point-in-time availability, publication lags, and revisions of macroeconomic features remain to be verified against an operational data source.
 - Score calibration and causal effects of contacting customers have not been established.
 - Contact capacity, costs, conversion value, and business acceptance thresholds are not yet specified.
 
