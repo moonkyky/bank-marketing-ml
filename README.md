@@ -4,7 +4,7 @@
 
 This project uses the [UCI Bank Marketing dataset](https://archive.ics.uci.edu/dataset/222/bank+marketing) to investigate whether historical customer and campaign information can help prioritize records for a bank's outbound marketing contacts. The practical question is **which records should be prioritized when contact capacity is limited?**
 
-The current scope covers **Phase 1 — Problem & Data** and **Phase 2 — Model Development**. The project documentation reports that the first three notebooks are complete; model experimentation and final evaluation remain to be done. Deployment and production monitoring are outside the current implementation scope.
+The implemented scope currently covers **Phase 1 — Problem & Data** through **Stage 5 — Model Experiments** in Phase 2. Final evaluation is the next stage. Engineering, batch deployment, and offline operations are planned but have not yet been implemented.
 
 ## 1. Problem Definition
 
@@ -40,8 +40,8 @@ Success is evaluated at three different levels:
 
 | Level | Criterion | Status |
 |---|---|---|
-| Reproducible development | Document prediction-time assumptions, fixed splits, leakage-safe preprocessing, and a repeatable baseline | Reported complete in notebooks `01`–`03` |
-| Model selection | Compare candidates using the same validation protocol, emphasizing AP and checking Top-K performance, stability, and complexity | Planned in notebook `04` |
+| Reproducible development | Document prediction-time assumptions, fixed splits, leakage-safe preprocessing, and a repeatable baseline | Complete in notebooks `01`–`03` |
+| Model selection | Compare candidates using the same validation protocol, emphasizing AP and checking Top-K performance, stability, and complexity | Complete in notebook `04` |
 | Final model assessment | Freeze the selected configuration and report held-out test performance and limitations | Planned in notebook `05` |
 | Operational business acceptance | Demonstrate value at a realistic contact capacity, accounting for cost, conversion value, eligibility, and contact constraints | Not yet defined |
 
@@ -153,7 +153,7 @@ The current Top-K analysis ranks each entire validation split as a single pool. 
 
 ## 5. Established Baseline
 
-The following settings and results are **reported in the existing baseline notebook**; they have not been rerun as part of this README edit.
+The following settings and results are reported in the baseline notebook and were reproduced from a fresh kernel during Stage 5.
 
 | Component | Baseline configuration |
 |---|---|
@@ -183,6 +183,18 @@ At the **top 10%** capacity, 824 validation records contain 318 observed subscri
 
 Values are rounded for display. Experiments should compare full-precision computed metrics under the same protocol.
 
+### 5.2 Stage 5 Model Selection
+
+Stage 5 compared the raw and engineered `pdays` representations and evaluated Logistic Regression, Random Forest, and HistGradientBoosting with four expanding Train-only `TimeSeriesSplit` folds. Logistic Regression and the strongest nonlinear family were then tuned on Train only. Three frozen candidates were evaluated on Validation.
+
+| Candidate | Validation AP | ROC-AUC | Lift@10% | Decision |
+|---|---:|---:|---:|---|
+| Baseline Logistic Regression | **0.297231** | 0.692923 | **2.783913** | Selected |
+| Tuned Logistic Regression | 0.293450 | **0.693192** | 2.678859 | Not selected |
+| Tuned HistGradientBoosting | 0.169968 | 0.568961 | 1.365693 | Not selected |
+
+The engineered `pdays` representation reduced Validation AP by `0.008997`, so raw `pdays` was retained. The frozen Stage 6 configuration is the original leakage-safe baseline Pipeline: `StandardScaler` for numeric features including raw `pdays`, `OneHotEncoder(handle_unknown="ignore")` for categorical features, and `LogisticRegression(max_iter=1000)` with otherwise default parameters. Test was not materialized or evaluated during Stage 5.
+
 ## 6. Notebook Workflow and Status
 
 The filenames below follow the **existing README's notebook naming convention**.
@@ -192,8 +204,8 @@ The filenames below follow the **existing README's notebook naming convention**.
 | `01-data-understanding.ipynb` | Data inspection, EDA, leakage assessment, chronological split | Completed |
 | `02-preprocessing.ipynb` | Feature definitions and baseline preprocessing | Completed |
 | `03-baseline-modeling.ipynb` | Baseline pipeline and validation results | Completed |
-| `04-model-experiments.ipynb` | Feature/preprocessing experiments, model comparison, tuning and selection | Next |
-| `05-final-evaluation.ipynb` | Final training, held-out evaluation and limitations | Planned |
+| `04-model-experiments.ipynb` | Feature/preprocessing experiments, model comparison, tuning and selection | Completed |
+| `05-final-evaluation.ipynb` | Final training, held-out evaluation and limitations | Next |
 
 Problem definition and acceptance criteria are documented here. Experimental hypotheses, detailed analyses, and decisions belong in the corresponding notebooks. Stable shared logic may be moved incrementally to `src/bank_marketing_ml/`, with focused tests where appropriate.
 
@@ -231,12 +243,12 @@ Keep data locations, dependency versions, preprocessing decisions, model setting
 
 **Next steps**
 
-1. Complete `04-model-experiments.ipynb`: compare feature representations and candidate models using the fixed validation protocol; select and document the final configuration.
-2. Complete `05-final-evaluation.ipynb`: freeze the configuration, perform the predetermined final training procedure, evaluate on Test, and report generalization limits.
-3. Consider software packaging, deployment, and monitoring **only after** the modeling phase and actual operational requirements justify them.
+1. Complete `05-final-evaluation.ipynb`: reconstruct the frozen Stage 5 configuration, refit the full Pipeline on Train+Validation, evaluate Test once, and report generalization limits without reopening model selection.
+2. Refactor only stable, validated logic into `src/bank_marketing_ml/` with focused tests.
+3. Implement the planned training artifacts, CSV batch-scoring CLI, and offline monitoring simulation in later stages.
 
 ## 9. References
 
 - [UCI Bank Marketing dataset](https://archive.ics.uci.edu/dataset/222/bank+marketing)
 - [UCI dataset DOI: 10.24432/C5K306](https://doi.org/10.24432/C5K306)
-- Internal project evidence: notebooks `01`–`03` (data understanding, preprocessing, baseline modeling)
+- Internal project evidence: notebooks `01`–`04` (data understanding, preprocessing, baseline modeling, model experiments)
