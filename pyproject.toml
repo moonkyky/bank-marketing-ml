@@ -1,7 +1,7 @@
 [project]
 name = "bank-marketing-ml"
 version = "0.1.0"
-description = "Add your description here"
+description = "Reproducible ranking of bank marketing records by term-deposit subscription likelihood"
 readme = "README.md"
 authors = [
     { name = "keonyoung00", email = "202206544+keonyoung00@users.noreply.github.com" }

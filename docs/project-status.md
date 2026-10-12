@@ -48,7 +48,7 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 
 ### Evidence and Limitations
 
-- Primary evidence: `README.md` Sections 1–4.
+- Primary evidence: `README.md` sections `Problem Definition`, `Data`, and `Methodology`.
 - The dataset represents historically contacted records and may not generalize to a different eligible population.
 - No unique customer identifier is available, so ranking and later monitoring remain record-based.
 - Exact operational contact schedules and financial thresholds cannot be reconstructed from the dataset.
