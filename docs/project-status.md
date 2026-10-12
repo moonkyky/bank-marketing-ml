@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-12
 
-This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` defines invariant working rules; this document records current progress, evidence, decisions, verification, and the next stage.
+This file is the cross-chat handoff for the 12-stage ML lifecycle. It records current progress, evidence, decisions, verification, and the next stage. Project methodology is documented in `README.md` and the relevant notebooks.
 
 ## Lifecycle Progress
 

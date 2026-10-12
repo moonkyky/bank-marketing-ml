@@ -136,7 +136,6 @@ bank-marketing-ml/
 │   └── download_data.py        # UCI dataset download and extraction
 ├── src/bank_marketing_ml/      # Package scaffold; refactoring begins in Stage 7
 ├── tests/                      # Minimal current smoke test
-├── AGENTS.md                   # Repository-wide development rules
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
@@ -247,7 +246,6 @@ Current test coverage is intentionally minimal and does not yet validate the mod
 ## Documentation
 
 - [Project Status](docs/project-status.md): current lifecycle state, verified decisions, and next-stage handoff
-- [Repository Instructions](AGENTS.md): invariant development and ML methodology rules
 - [Data Understanding](notebooks/01-data-understanding.ipynb): data inspection, EDA, leakage analysis, and split design
 - [Preprocessing](notebooks/02-preprocessing.ipynb): feature groups and train-only preprocessing
 - [Baseline Modeling](notebooks/03-baseline-modeling.ipynb): baseline training and Validation evaluation
