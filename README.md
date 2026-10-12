@@ -12,8 +12,8 @@ The project currently covers data understanding, preprocessing, baseline modelin
 |---|---|
 | Phase 1 — Problem & Data | Complete |
 | Stage 4 — Baseline Modeling | Complete |
-| Stage 5 — Model Experiments | Complete |
-| Stage 6 — Final Evaluation | Next |
+| Stage 5 — Model Experiments | Revision required for sentinel-aware baseline |
+| Stage 6 — Final Evaluation | Pending revised Stage 5 selection |
 | Phase 3 — Engineering & Deployment | Not started |
 | Phase 4 — Operations & Iteration | Not started |
 
@@ -21,17 +21,15 @@ Detailed lifecycle state, decisions, verification, and the next-stage handoff ar
 
 ## Key Validation Results
 
-Stage 5 selected the original Logistic Regression baseline. These are **Validation results used for model selection**, not final Test performance.
+Notebook 03 was rerun from a fresh kernel with sentinel-aware `pdays` preprocessing. These are current **baseline Validation results**, not a final model selection or Test evaluation.
 
-| Candidate | Average Precision | ROC-AUC | Lift@10% | Decision |
-|---|---:|---:|---:|---|
-| Baseline Logistic Regression | **0.297231** | 0.692923 | **2.783913** | Selected |
-| Tuned Logistic Regression | 0.293450 | **0.693192** | 2.678859 | Not selected |
-| Tuned HistGradientBoosting | 0.169968 | 0.568961 | 1.365693 | Not selected |
+| Candidate | Average Precision | ROC-AUC | Lift@10% |
+|---|---:|---:|---:|
+| Sentinel-aware Logistic Regression baseline | 0.288234 | 0.688023 | 2.705123 |
 
-At the top 10% capacity, the selected baseline ranks 318 of 1,142 observed Validation subscribers within 824 records. This corresponds to Precision@10% of `0.385922`, Recall@10% of `0.278459`, and Lift@10% of `2.783913`.
+At the top 10% capacity, the baseline ranks 309 of 1,142 observed Validation subscribers within 824 records. Precision@10% is `0.375000` and Recall@10% is `0.270578`.
 
-Test was not materialized or evaluated during Stage 5. Final Test performance must not be inferred from these results.
+The earlier raw-`pdays` baseline recorded AP `0.297231`. The current representation separates sentinel status from elapsed days as a semantic constraint, despite the AP reduction of `0.008997`. Notebook 04 still contains the historical experiments and must be revised before final selection. Test remains reserved for Stage 6.
 
 ## Problem Definition
 
@@ -91,30 +89,25 @@ Aggregate Test information was inspected during earlier EDA. Test is therefore n
 
 ### Preprocessing
 
-The selected scikit-learn `Pipeline` fits all learned steps on Train only during development.
+The baseline scikit-learn `Pipeline` fits all learned steps on Train only during development.
 
 | Branch | Configuration |
 |---|---|
-| Numeric | `StandardScaler`, including raw `pdays` |
+| Numeric | `StandardScaler` on eight ordinary numerical features |
+| `pdays` | Derive `pdays_previously_contacted = (pdays != 999)` and `pdays_elapsed = 0` for sentinel rows, otherwise the recorded days; scale both derived columns |
 | Categorical | `OneHotEncoder(handle_unknown="ignore")` |
 | Missing-value imputation | Not applied; no recognized missing values were found in development inputs |
-| Additional feature engineering | None selected |
+| Other feature engineering | None applied |
+
+The 19 raw modeling inputs produce 62 transformed features: eight numerical, 52 one-hot categorical, and two sentinel-aware `pdays` columns. Raw `999` is not used as an elapsed-day value.
 
 Cross-validation fits the complete preprocessing and estimator Pipeline independently within each training fold.
 
 ### Model Selection
 
-Stage 5 used four expanding `TimeSeriesSplit` folds within Train for model-family comparison and hyperparameter search. Only a small set of Train-tuned candidates was then evaluated on Validation.
+The historical Stage 5 run used four expanding `TimeSeriesSplit` folds within Train for model-family comparison and hyperparameter search, followed by a small Validation comparison. Its raw-`pdays` selection is superseded by the revised representation policy.
 
-The frozen Stage 6 configuration is:
-
-- 19 modeling predictors, excluding `duration` and target `y`
-- raw `pdays`
-- `StandardScaler` for numeric features
-- `OneHotEncoder(handle_unknown="ignore")` for categorical features
-- `LogisticRegression(max_iter=1000)` with otherwise default parameters
-
-Stage 6 must reconstruct this configuration without further tuning, refit all learned steps on Train+Validation, and evaluate Test once.
+Stage 5 must be rerun with sentinel-aware preprocessing in every candidate and fold. No current configuration is frozen for Stage 6. Once Stage 5 selects and freezes a configuration, Stage 6 will refit all learned steps on Train+Validation and evaluate Test once.
 
 ### Evaluation
 
@@ -189,12 +182,12 @@ Start Jupyter from the project root:
 uv run jupyter lab
 ```
 
-Run the completed notebooks in order:
+Run notebooks 01–03 in order. Notebook 04 is historical and awaits revision:
 
 1. [Data Understanding](notebooks/01-data-understanding.ipynb)
 2. [Preprocessing](notebooks/02-preprocessing.ipynb)
 3. [Baseline Modeling](notebooks/03-baseline-modeling.ipynb)
-4. [Model Experiments](notebooks/04-model-experiments.ipynb)
+4. [Model Experiments](notebooks/04-model-experiments.ipynb) — revision required
 
 Each notebook loads its own data and should run top-to-bottom from a fresh kernel. Notebook 05 and the supported training/scoring commands have not yet been implemented.
 
@@ -242,7 +235,7 @@ Current test coverage is intentionally minimal and does not yet validate the mod
 - [x] Stage 2 — Data Understanding
 - [x] Stage 3 — Data Preprocessing
 - [x] Stage 4 — Baseline Modeling
-- [x] Stage 5 — Model Experiments
+- [ ] Stage 5 — Model Experiments (revise for sentinel-aware baseline)
 - [ ] Stage 6 — Final Evaluation
 - [ ] Stage 7 — Refactoring & Packaging
 - [ ] Stage 8 — ML Pipeline & Release Readiness

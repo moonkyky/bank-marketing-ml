@@ -12,8 +12,8 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 | 1 — Problem & Data | 2. Data Understanding | Complete | `notebooks/01-data-understanding.ipynb` |
 | 1 — Problem & Data | 3. Data Preprocessing | Complete | `notebooks/02-preprocessing.ipynb` |
 | 2 — Model Development | 4. Baseline Modeling | Complete | `notebooks/03-baseline-modeling.ipynb` |
-| 2 — Model Development | 5. Model Experiments | Complete | `notebooks/04-model-experiments.ipynb` |
-| 2 — Model Development | 6. Final Evaluation | Next | `notebooks/05-final-evaluation.ipynb` |
+| 2 — Model Development | 5. Model Experiments | Revision required | Historical `notebooks/04-model-experiments.ipynb` |
+| 2 — Model Development | 6. Final Evaluation | Pending revised Stage 5 | `notebooks/05-final-evaluation.ipynb` |
 | 3 — Engineering & Deployment | 7. Refactoring & Packaging | Not started | — |
 | 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Not started | — |
 | 3 — Engineering & Deployment | 9. Model Deployment & Integration | Not started | — |
@@ -28,6 +28,7 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 - Target: `y`, mapped from `no`/`yes` to `0`/`1`.
 - Retained prediction-time features: the established 19 predictors.
 - Excluded feature: `duration`, because it is unavailable before the contact ends.
+- `pdays = 999` is a sentinel. Derive `pdays_previously_contacted` and `pdays_elapsed` (zero for sentinel rows); do not scale raw `pdays` as elapsed days. This is a representation constraint, not a Validation-selected option.
 - Split: source row order, Train 70% (`0:28,831`), Validation 20% (`28,831:37,069`), Test 10% (`37,069:41,188`).
 - Selection metric: Average Precision; ROC-AUC and stable record-based Top-5/10/20% metrics are supporting evidence.
 - Top-K: `ceil(n × fraction)`, unrounded scores, descending stable sort, original row order for ties.
@@ -87,14 +88,15 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 - Missing client identifiers prevent an audit of repeated customers or cross-split customer overlap.
 - Incomplete timestamps prevent verification of exact calendar boundaries and point-in-time macroeconomic publication availability.
 
-Primary evidence: `notebooks/01-data-understanding.ipynb`. These are stored Notebook findings; Stage 2 was not rerun during the current documentation update.
+Primary evidence: `notebooks/01-data-understanding.ipynb`. The simplified notebook was executed from a fresh kernel on 2026-10-12; subsequent interpretation edits retained those outputs. No EDA was rerun during this documentation update.
 
 ## Stage 3 — Data Preprocessing
 
-### Frozen Baseline Representation
+### Current Baseline Representation
 
 - Modeling inputs: 19 predictors after excluding target `y` and `duration`.
-- Numeric branch: `StandardScaler` on eight numerical predictors plus raw `pdays`.
+- Numeric branch: `StandardScaler` on eight ordinary numerical predictors.
+- Sentinel branch: derive `pdays_previously_contacted = (pdays != 999)` and `pdays_elapsed = 0` for sentinel rows, otherwise recorded days; apply `StandardScaler` to both derived columns inside the Pipeline.
 - Categorical branch: `OneHotEncoder(handle_unknown="ignore")` on ten categorical predictors.
 - Preserve literal `"unknown"` values as observed categories.
 - Do not add imputation because the inspected development inputs contain no recognized missing values.
@@ -102,22 +104,23 @@ Primary evidence: `notebooks/01-data-understanding.ipynb`. These are stored Note
 - Fit preprocessing on Train only and transform Validation without refitting.
 - Leave unspecified columns dropped by the `ColumnTransformer`.
 
-### Stored Validation Checks
+### Implementation and Verification
 
-- Chronological boundaries, feature/target alignment, and complete non-overlapping feature groups were checked.
+- Notebook 02 was simplified from 36 to 14 cells; assertion blocks and synthetic validation tests were removed.
 - Binary target encoding uses `no = 0` and `yes = 1`.
-- Transformed Train and Validation matrices have consistent width and contain no NaN or infinite values.
-- The fitted representation produces 61 transformed features: nine numeric outputs and 52 one-hot outputs.
-- A synthetic unseen job category transforms successfully without changing output width.
-- Test was partitioned to preserve boundaries but was not transformed or used to fit preprocessing.
+- Train output shape: `(28831, 62)`; Validation output shape: `(8238, 62)`.
+- Outputs comprise eight numerical, 52 one-hot categorical, and two sentinel-aware columns.
+- Only Train and Validation inputs are prepared; Test is not transformed or evaluated.
+- Fresh Kernel execution succeeded for all six code cells; file-level Ruff checks passed.
 
-Primary evidence: `notebooks/02-preprocessing.ipynb`. These are stored Notebook results; Stage 3 was not rerun during the current documentation update.
+Primary evidence: `notebooks/02-preprocessing.ipynb`, executed on 2026-10-12. No execution was repeated during this documentation update.
 
 ## Stage 4 — Baseline Modeling
 
 ### Configuration
 
 - Full scikit-learn `Pipeline`: baseline `ColumnTransformer` followed by `LogisticRegression(max_iter=1000)`.
+- Sentinel-aware preprocessing matches Notebook 02 and produces 62 transformed features.
 - All preprocessing statistics and model coefficients are fitted on Train only.
 - Positive-class probabilities rank Validation records; no hard-label threshold is selected.
 - Test remains excluded from training, prediction, and evaluation.
@@ -126,15 +129,15 @@ Primary evidence: `notebooks/02-preprocessing.ipynb`. These are stored Notebook 
 
 | Metric | Result |
 |---|---:|
-| Average Precision | 0.297231 |
-| ROC-AUC | 0.692923 |
+| Average Precision | 0.288234 |
+| ROC-AUC | 0.688023 |
 | Validation prevalence | 0.138626 |
 
 | Capacity | K | Captured positives | Precision@K | Recall@K | Lift@K |
 |---|---:|---:|---:|---:|---:|
-| Top 5% | 412 | 177 | 0.429612 | 0.154991 | 3.099072 |
-| Top 10% | 824 | 318 | 0.385922 | 0.278459 | 2.783913 |
-| Top 20% | 1,648 | 503 | 0.305218 | 0.440455 | 2.201742 |
+| Top 5% | 412 | 179 | 0.434466 | 0.156743 | 3.134090 |
+| Top 10% | 824 | 309 | 0.375000 | 0.270578 | 2.705123 |
+| Top 20% | 1,648 | 499 | 0.302791 | 0.436953 | 2.184233 |
 
 ### Interpretation and Limitations
 
@@ -144,9 +147,13 @@ Primary evidence: `notebooks/02-preprocessing.ipynb`. These are stored Notebook 
 - Whole-period Top-K evaluation does not simulate daily capacity, repeat-contact rules, or unique-customer constraints.
 - Scores are used for ranking; probability calibration and causal business impact are not established.
 
-Primary evidence: `notebooks/03-baseline-modeling.ipynb`. The core AP, ROC-AUC, and Top-K results were reproduced in the Stage 5 Fresh Kernel run.
+The earlier raw-`pdays` baseline AP was `0.297231`; the new baseline is lower by `0.008997`. The sentinel-aware constraint was adopted for semantic consistency, with this measured trade-off recorded rather than hidden.
+
+Primary evidence: `notebooks/03-baseline-modeling.ipynb`. Simplified from 25 to 16 cells, with assertion blocks removed. Fresh Kernel execution succeeded for all eight code cells on 2026-10-12 and reproduced these metrics on a second execution. File-level Ruff checks passed. No model was rerun during this documentation update.
 
 ## Stage 5 — Model Experiments
+
+**Current status: revision required.** The results below preserve the historical raw-`pdays` run. They are not current candidate comparisons under the revised policy. The prior Stage 6 freeze is superseded; no current final configuration is frozen. Revise Notebook 04 and rerun comparison and tuning with sentinel-aware preprocessing before proceeding to Stage 6.
 
 ### Objective and Method
 
@@ -195,7 +202,7 @@ Frozen Validation comparison:
 
 Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a diagnostic warning about temporal and prevalence sensitivity, not evidence for selecting a different model.
 
-### Frozen Configuration for Stage 6
+### Historical Configuration — Superseded
 
 - Features: the established 19 predictors; exclude `duration` and target `y`.
 - Numeric preprocessing: `StandardScaler` on `age`, `campaign`, `previous`, `emp.var.rate`, `cons.price.idx`, `cons.conf.idx`, `euribor3m`, `nr.employed`, and raw `pdays`.
@@ -217,6 +224,8 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 | Stage 5 notebook lint / format | Passed | `uv run ruff check notebooks/04-model-experiments.ipynb`; `uv run ruff format --check notebooks/04-model-experiments.ipynb` |
 | Repository-wide lint | Passed | `uv run ruff check .` after focused import cleanup in notebooks `01`, `03`, and `scripts/download_data.py` |
 
-## Next Handoff — Stage 6
+## Next Handoff — Stage 5 Revision
 
-Work only in `notebooks/05-final-evaluation.ipynb` plus necessary status/README documentation. Reconstruct the frozen configuration above, fit on Train+Validation, and perform the first and only final Test evaluation. Do not tune, change features, change preprocessing, or select a different model based on Test results.
+Work in `notebooks/04-model-experiments.ipynb` plus necessary README/status documentation. Simplify the notebook to implementation and substantive interpretation, remove assertion suites and generic registry/validation scaffolding, and reproduce Notebook 03's sentinel-aware baseline (AP `0.288234`, ROC-AUC `0.688023`). Apply the same sentinel-aware preprocessing within every candidate Pipeline and time-aware training fold; do not reopen raw `pdays` as an eligible representation under the current policy.
+
+Rerun model comparison and bounded hyperparameter searches, evaluate frozen candidates on Validation, and record a new selection and configuration. Keep Test sealed. After Fresh Kernel execution and appropriate lint checks, update this handoff to Stage 6. Stage 6 then fits the newly frozen configuration on Train+Validation and evaluates Test once.
