@@ -31,15 +31,8 @@ truth.
 - Prediction time: immediately before the planned marketing contact.
 - Exclude `duration`; it is unavailable before the contact finishes.
 - Retain `contact`; the communication channel is decided before scoring.
-- Interpret `campaign` according to the UCI definition: the cumulative number
-  of contacts performed for the client during the current campaign, including
-  the last contact. UCI does not provide a separate planned contact-attempt
-  variable.
-- Retain `campaign`; the project assumes this cumulative count of contacts
-  performed so far is known operational history at scoring time. Do not
-  reinterpret it as the ordinal number of a future planned contact.
-- Treat changes in the campaign workflow as a possible distribution-shift
-  risk, not as evidence that `campaign` is inherently target leakage.
+- Retain the other 19 predictors under the established prediction-time feature
+  policy.
 - Preserve the source row order and the established chronological split:
   Train 70%, Validation 20%, Test 10%.
 - Do not shuffle or stratify the established chronological holdout.
