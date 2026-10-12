@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` defines invariant working rules; this document records current progress, evidence, decisions, verification, and the next stage.
 
@@ -26,7 +26,8 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 - Prediction time: immediately before a planned contact.
 - Unit: one campaign record; no unique customer identifier is available.
 - Target: `y`, mapped from `no`/`yes` to `0`/`1`.
-- Retained prediction-time features: `contact` and `campaign` under the documented availability assumptions.
+- `campaign` dataset semantics: cumulative contacts performed for the client in the current campaign, including the last contact; UCI provides no separate future planned-attempt variable.
+- Retained prediction-time features: `contact` and `campaign`. The project assumes the cumulative `campaign` count is completed-contact history already known at scoring time and does not reinterpret it as a future contact ordinal.
 - Excluded feature: `duration`, because it is unavailable before the contact ends.
 - Split: source row order, Train 70% (`0:28,831`), Validation 20% (`28,831:37,069`), Test 10% (`37,069:41,188`).
 - Selection metric: Average Precision; ROC-AUC and stable record-based Top-5/10/20% metrics are supporting evidence.
@@ -72,7 +73,8 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. `AGENTS.md` d
 ### Leakage and Split Decisions
 
 - Exclude `duration`; it is only known after the current contact.
-- Retain `contact` and `campaign` under the documented pre-contact availability assumptions.
+- Retain `contact` because the channel is selected before scoring.
+- Retain `campaign` as the cumulative count of contacts performed so far, assumed to be known at scoring time; do not describe it as a UCI-provided future planned-attempt variable.
 - Retain all other candidate predictors; do not remove features based only on EDA association or correlation.
 - Preserve source row order and use boundaries `28,831` and `37,069` for the 70/20/10 split.
 - Do not shuffle, stratify, or reconstruct dates from `month` and `day_of_week`.
@@ -198,6 +200,7 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 ### Frozen Configuration for Stage 6
 
 - Features: the established 19 predictors; exclude `duration` and target `y`.
+- `campaign` meaning: cumulative current-campaign contacts performed so far, including the last contact; the project assumes this completed-contact history is available at scoring time.
 - Numeric preprocessing: `StandardScaler` on `age`, `campaign`, `previous`, `emp.var.rate`, `cons.price.idx`, `cons.conf.idx`, `euribor3m`, `nr.employed`, and raw `pdays`.
 - Categorical preprocessing: `OneHotEncoder(handle_unknown="ignore")` on `job`, `marital`, `education`, `default`, `housing`, `loan`, `contact`, `month`, `day_of_week`, and `poutcome`.
 - Estimator: `LogisticRegression(max_iter=1000)` with otherwise default scikit-learn 1.9.1 parameters.

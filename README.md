@@ -98,12 +98,12 @@ The intended decision is made **before a planned contact**, so only information 
 | Customer attributes | Available before the contact |
 | `pdays`, `previous`, `poutcome` | Refer to prior campaign history available before the current contact |
 | `month`, `day_of_week` | The planned contact date is known when scoring |
-| `campaign` | Retained: the current campaign contact count for the client is treated as the current planned attempt number and is known at scoring time |
+| `campaign` | UCI meaning: cumulative contacts performed for this client in the current campaign, including the last contact. Retained because the project assumes this completed-contact count is known operational history at scoring time |
 | `contact` | Retained: the communication channel is decided before scoring |
 | Macroeconomic indicators | Values were published and available at scoring time; verify publication lags and revisions |
 | `duration` | **Excluded**: current-call duration is unavailable before the call |
 
-Keeping `duration` in the raw dataset for inspection does not make it an eligible model input. The retained `campaign` feature may reflect the historical contact policy, so a material change in campaign workflow can cause distribution shift and requires a new feature-availability review.
+Keeping `duration` in the raw dataset for inspection does not make it an eligible model input. UCI does not provide a separate variable for a future planned contact-attempt number, and this project does not reinterpret `campaign` as one. The feature is used as the observed cumulative count of contacts performed so far, which is assumed to be available at scoring time. It may reflect the historical contact policy, so a material workflow or logging change can cause distribution shift and requires a new feature-availability review.
 
 ## 4. Data Splitting and Evaluation Protocol
 
