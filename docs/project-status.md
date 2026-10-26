@@ -12,8 +12,8 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. It records cu
 | 1 — Problem & Data | 2. Data Understanding | Complete | `notebooks/01-data-understanding.ipynb` |
 | 1 — Problem & Data | 3. Data Preprocessing | Complete | `notebooks/02-preprocessing.ipynb` |
 | 2 — Model Development | 4. Baseline Modeling | Complete | `notebooks/03-baseline-modeling.ipynb` |
-| 2 — Model Development | 5. Model Experiments | Revision required | `notebooks/04-model-experiments.ipynb` (baseline reproduced; comparison pending) |
-| 2 — Model Development | 6. Final Evaluation | Pending revised Stage 5 | `notebooks/05-final-evaluation.ipynb` |
+| 2 — Model Development | 5. Model Experiments | Complete | `notebooks/04-model-experiments.ipynb` |
+| 2 — Model Development | 6. Final Evaluation | Complete | `notebooks/05-final-evaluation.ipynb` |
 | 3 — Engineering & Deployment | 7. Refactoring & Packaging | Not started | — |
 | 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Not started | — |
 | 3 — Engineering & Deployment | 9. Model Deployment & Integration | Not started | — |
@@ -153,21 +153,43 @@ Primary evidence: `notebooks/03-baseline-modeling.ipynb`. Simplified from 25 to 
 
 ## Stage 5 — Model Experiments
 
-**Current status: revision required.** The results below preserve the historical raw-`pdays` run. They are not current candidate comparisons under the revised policy. The prior Stage 6 freeze is superseded; no current final configuration is frozen. Revise Notebook 04 and rerun comparison and tuning with sentinel-aware preprocessing before proceeding to Stage 6.
+**Current status: complete — 2026-10-26, before Test access.** Sentinel-aware 전처리로 모델 비교, tuning, Validation 선택과 평가 규칙 확정을 완료했다. 아래 새 결과와 과거 raw-`pdays` 결과는 구분한다.
 
-### Current Revision Progress — 2026-10-26
+### Current Experiments and Selection
 
-- Notebook 04 has been rebuilt through baseline reproduction, preserving the learning outline. The historical raw-`pdays` results below remain superseded evidence; the prior notebook is available in Git history.
-- Fresh-kernel, top-to-bottom execution of all eight current code cells succeeded with `uv run --frozen --offline jupyter execute notebooks/04-model-experiments.ipynb --inplace --timeout=300`.
-- Newly verified Validation AP `0.288234`, ROC-AUC `0.688023`, and Lift@10% `2.705123` match Notebook 03 to six decimals. All five stored reference metric differences are below `5e-7`.
-- The complete sentinel-aware Pipeline was fitted on Train only. CSV loading stops at row 37,069; Test rows were not loaded or evaluated.
-- Model-family comparison is now implemented but unexecuted: Logistic Regression, Random Forest (`n_estimators=100`, `random_state=42`, one worker), and RBF SVM (`C=1.0`, `gamma="scale"`), using four expanding Train-only folds and cloned sentinel-aware Pipelines. SVM uses decision-function ranking scores without probability estimation.
-- The comparison records fold prevalence, AP, ROC-AUC, fit time, and score-generation time. No CV results or tuning decision are available yet; the baseline execution recorded above predates these new cells.
-- CV tuning and final selection are still pending. No new final configuration is frozen.
+- 원본 앞 37,069행만 로딩했다. Train 내부의 확장형 `TimeSeriesSplit(n_splits=4, gap=0)`와 복제한 전체 Pipeline을 모든 후보에 동일하게 적용했다.
+- 초기 CV 평균 AP: Logistic Regression `0.083139`, Random Forest `0.066477`, RBF SVM `0.060447`. SVM은 AP와 계산 비용을 고려해 추가 tuning에서 제외했다.
+- 탐색은 결과를 보고 확장하지 않았다. Logistic Regression `C=[0.01,0.1,1,10]`, Random Forest `max_depth=[5,10,None]`, `min_samples_leaf=[5,20]`; RF는 tree 100개, `random_state=42`, worker 하나를 유지했다.
+- Train-only tuning: Logistic Regression `C=0.1`, CV AP `0.085400`; Random Forest `max_depth=None`, `min_samples_leaf=20`, CV AP `0.065949`.
+- 기존 선택 규칙을 재사용했다: Validation AP 최고값에서 0.005 이내, 이어 Lift@10% 최고값의 98% 이상인 후보 중 단순성 우선. 이 범위는 통계적 유의성 기준이 아니다.
 
-The following method, results, and verification describe the historical run.
+| Validation 후보 | AP | ROC-AUC | Lift@10% |
+|---|---:|---:|---:|
+| Baseline Logistic Regression | 0.288234 | 0.688023 | 2.705123 |
+| Tuned Logistic Regression | 0.282831 | 0.686609 | 2.643841 |
+| Tuned Random Forest | 0.160494 | 0.552186 | 1.304412 |
 
-### Objective and Method
+Baseline을 선택했다. Tuned LR의 AP 감소 `0.005404`는 AP 허용 범위 밖이다. Baseline 구간별 Validation AP `0.108697`~`0.386684`와 양성 비율 5.73~23.51%는 기간 변화의 한계를 보여준다. 이 결정과 아래 평가 규칙은 Test 접근 전에 확정했고, 이후 별도 Notebook 05에서 최종 평가했다.
+
+### Frozen Configuration and Evaluation Protocol
+
+- 확정 시점: 2026-10-26, 이번 Test 접근 전. 과거 Test target 집계 정보 확인 이력은 계속 공개한다.
+- Feature: 원본 19개, `duration`·`y` 제외; `contact` 유지. 수치형 8개 scaling, `pdays` indicator·elapsed 파생 후 두 열 scaling, 범주형 10개 one-hot (`handle_unknown="ignore"`), `unknown` 유지. 세부 목록과 함수는 Notebook 04의 확정 코드가 근거이다.
+- Estimator: `LogisticRegression(C=1.0, solver="lbfgs", max_iter=1000, tol=0.0001)`, 나머지는 Notebook 04에 출력된 전체 설정 유지. Class weight·calibration 변경 없음. `lbfgs`에서는 무작위 추출을 사용하지 않는다.
+- 환경: Python 3.12.15, scikit-learn 1.9.1, NumPy 2.5.3, pandas 3.0.6, SciPy 1.18.1; 의존성 변경 없음.
+- 최종 학습: 새로운 동일 구성의 전체 Pipeline을 Train+Validation 37,069행에 fit. Test 4,119행은 학습하지 않는다.
+- 최종 평가: 확정한 모델 하나로 Test를 한 번 평가. AP·ROC-AUC·양성 비율과 Top-5/10/20% Precision·Recall·Lift. `ceil(n*p)`, 반올림하지 않은 양성 클래스 점수, 내림차순 stable sort, 원본 순서 tie break, Test 양성 비율 기준 Lift.
+- Test 평가 후 tuning·재선택·평가 정책 변경 없음. 수익성·인과효과·검증된 확률은 주장하지 않는다.
+
+### Verification
+
+새 커널에서 Notebook 04의 코드 셀 21개를 위에서 아래로 실행해 baseline 재현, CV, tuning과 Validation 선택을 확인했다. 이후 수정은 결과 해석과 확정 기록 Markdown이다. 모델 개발에는 Test 행을 로딩하지 않았다. 사용자가 삭제한 저장값 비교 절은 복원하지 않았다.
+
+### Historical Raw-pdays Run — Superseded
+
+다음 내용은 과거 실행의 근거로 보존한다. 현재 구성과 결과로 사용하지 않는다.
+
+#### Objective and Method
 
 - Reproduce the Stage 4 baseline in the locked environment.
 - Compare raw `pdays` with an explicit previous-contact indicator plus elapsed-day representation.
@@ -178,7 +200,7 @@ The following method, results, and verification describe the historical run.
 
 Stage 5 reads only the first 37,069 CSV rows with `nrows`; Test rows are not materialized, inspected, or evaluated.
 
-### Results
+#### Results
 
 Baseline reproduction:
 
@@ -214,7 +236,7 @@ Frozen Validation comparison:
 
 Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a diagnostic warning about temporal and prevalence sensitivity, not evidence for selecting a different model.
 
-### Historical Configuration — Superseded
+#### Historical Configuration — Superseded
 
 - Features: the established 19 predictors; exclude `duration` and target `y`.
 - Numeric preprocessing: `StandardScaler` on `age`, `campaign`, `previous`, `emp.var.rate`, `cons.price.idx`, `cons.conf.idx`, `euribor3m`, `nr.employed`, and raw `pdays`.
@@ -224,7 +246,7 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 - Stage 6 training rule: create a fresh Pipeline with this exact configuration and fit all learned steps on Train+Validation.
 - Stage 6 evaluation rule: evaluate Test once with AP, ROC-AUC, and Top-5/10/20%; diagnostics must not reopen model or feature selection.
 
-### Verification
+#### Verification
 
 | Check | Status | Evidence |
 |---|---|---|
@@ -236,8 +258,44 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 | Stage 5 notebook lint / format | Passed | `uv run ruff check notebooks/04-model-experiments.ipynb`; `uv run ruff format --check notebooks/04-model-experiments.ipynb` |
 | Repository-wide lint | Passed | `uv run ruff check .` after focused import cleanup in notebooks `01`, `03`, and `scripts/download_data.py` |
 
-## Next Handoff — Stage 5 Revision
+## Stage 6 — Final Evaluation
 
-Work in `notebooks/04-model-experiments.ipynb` plus necessary README/status documentation. Simplify the notebook to implementation and substantive interpretation, remove assertion suites and generic registry/validation scaffolding, and retain the newly reproduced Notebook 03 sentinel-aware baseline (AP `0.288234`, ROC-AUC `0.688023`). Apply the same sentinel-aware preprocessing within every candidate Pipeline and time-aware training fold; do not reopen raw `pdays` as an eligible representation under the current policy.
+**Current status: complete — 2026-10-26.** Test 접근 전에 확정한 sentinel-aware Logistic Regression 하나를 평가했다. Test 결과로 모델이나 규칙을 수정하지 않았다.
 
-Rerun model comparison and bounded hyperparameter searches, evaluate frozen candidates on Validation, and record a new selection and configuration. Keep Test sealed. After Fresh Kernel execution and appropriate lint checks, update this handoff to Stage 6. Stage 6 then fits the newly frozen configuration on Train+Validation and evaluates Test once.
+### Final Training and Data Provenance
+
+- Notebook 05는 다른 노트북의 실행 상태에 의존하지 않고 동일한 feature 정의와 전처리를 직접 구성한다.
+- Train+Validation 37,069행, 가입 레코드 2,748개(양성 비율 `0.074132`)에서 전체 Pipeline을 새로 fit했다. 변환 후 feature 62개, `lbfgs` 46회 반복으로 학습했다.
+- 원본 CSV SHA-256: `74adfc578bf77a7ff4bb1ba4a9f8709d9e3c6907342959c2c8416847e0afb4d8`.
+- Test 접근 전 최초 확정본 Notebook 04 SHA-256: `187186e12721f75e7f8d5c1dabdd8207b49d0e010ff3da35af489e75d6a4c953`. 이는 당시 파일의 hash이며, 이후 Markdown을 정리한 현재 파일의 hash가 아니다. 모델·평가 코드와 저장 출력은 그대로 보존했다.
+- 모델 1개, Test score 계산 1회. 그 점수를 AP·ROC-AUC·Top-K와 PR 곡선에 재사용했다. 과거 EDA의 Test 집계 정보 확인 이력은 계속 공개한다.
+
+### Newly Verified Test Results
+
+Test는 4,119행, 가입 레코드 1,892개이며 양성 비율은 `0.459335`이다. AP `0.549042`, ROC-AUC `0.620009`를 얻었다.
+
+| 용량 | K | 포함한 가입 레코드 | Precision@K | Recall@K | Lift@K |
+|---|---:|---:|---:|---:|---:|---:|
+| 상위 5% | 206 | 128 | 0.621359 | 0.067653 | 1.352737 |
+| 상위 10% | 412 | 211 | 0.512136 | 0.111522 | 1.114951 |
+| 상위 20% | 824 | 432 | 0.524272 | 0.228330 | 1.141372 |
+
+Validation보다 높은 Test AP를 개선으로 해석하지 않는다. 양성 비율이 13.86%에서 45.93%로 크게 바뀌었고 학습 범위도 달라졌다. Test의 ROC-AUC와 Lift@10%는 후기 기간의 순위 성능이 제한적임을 보여준다. 누적 Precision은 관측 구간에 따라 단조 감소하지 않을 수 있다. 수익성, 인과효과, 검증된 확률이나 운영 수용 가능성은 입증하지 않았다.
+
+### Verification
+
+- Notebook 04: 편집 전 새 커널에서 코드 셀 21개 전체 실행 성공. Baseline 재현, CV, tuning, Validation 선택 확인. Test 행 미로딩. 이후 코드 셀 내용·실행 순서·출력은 보존하고 Markdown을 정리했다.
+- Notebook 05: 편집 전 새 커널에서 코드 셀 9개 전체 실행 성공. 확정 구성으로 최종 학습·Test 평가 1회. 이후 데이터 준비가 전처리보다 먼저 오도록 기존 코드 셀을 재배치하고 Markdown을 정리했다. 코드 내용과 저장 출력·실행 번호는 당시 실행 이력으로 보존했다. 재배치 후 모델과 Test는 재실행하지 않았다.
+- Test 접근 전 Notebook 04/05 feature 정의와 모델 전체 파라미터 일치를 확인했다. 이후 편집에서 모든 코드 셀과 출력의 동일성을 다시 확인했다. Notebook 04의 코드 셀 source를 실행 순서대로 `\n\n`으로 연결한 UTF-8 SHA-256은 편집 전후 동일한 `4290e8216a99c7ca70583ae3aa5ac9752cb60b5baf442f8dfce6e315a74efd0c`이다.
+- 저장된 Test PR 곡선 표시 확인. Notebook JSON·Python 문법, 실행 순서와 오류 없는 출력 확인 통과. `uv run --frozen --offline ruff check .`, Notebook 04/05 format 검사와 `git diff --check` 통과. 모델 재실행 없이 결과 해석 Markdown을 보완했다.
+- Notebook assertion suite나 검증 framework는 추가하지 않았다. 기존 raw-`pdays` 근거는 위에 보존했고, 삭제 요청한 저장값 비교 절은 복원하지 않았다.
+
+### Notebook Presentation Alignment
+
+Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 흐름에 맞춰 Notebook 04/05를 정리했다. 제목은 영어, 설명은 한국어로 유지했다. Notebook 04는 64개에서 43개 셀로 줄여 인접한 설명을 묶고, Notebook 05는 데이터·Pipeline 준비 → 최종 학습 → 평가 → 요약 순서로 재구성했다. 요약 표에는 선택 구성과 주요 지표를 남기고 실행 이력·hash 의미는 이 문서에서 관리한다. 삭제 요청한 저장값 비교 절은 추가하지 않았다. 정책·파라미터·수치·출력의 변경 없이 편집했으며 새 실험 결과로 표현하지 않는다.
+
+## Next Handoff — Stage 7 Refactoring & Packaging
+
+모델 개발과 최종 평가를 완료했다. 다음 작업은 확정한 feature 변환과 순위 지표 등 안정된 로직을 재사용 가능한 Python 모듈로 옮기고 의미 있는 단위 테스트를 작성하는 것이다. 로컬 CSV Batch CLI 범위를 유지한다. 현재 노트북은 출시된 학습·추론 인터페이스가 아니며, artifact 관리·schema 검증·호환성·실패 동작은 이후 출시 준비에서 다룬다.
+
+현재 Test는 이미 평가되었다. 같은 Test를 다시 tuning이나 재선택에 사용해 독립 평가라고 주장하지 않는다. 새 모델 개선에는 새로운 기간의 데이터 또는 별도로 설계한 backtest와 평가 계획이 필요하다.

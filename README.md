@@ -4,7 +4,7 @@
 
 [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)을 사용해, 연락 가능한 용량이 제한된 상황에서 아웃바운드 마케팅 레코드의 우선순위를 정하는 데이터 누수 방지 중심의 머신러닝 워크플로를 개발한다.
 
-현재 데이터 이해, 전처리, baseline 모델링과 모델 실험을 다룬다. 독립적인 Test 평가, 재사용 가능한 패키징, 배치 추론과 오프라인 모니터링은 이후 작업으로 계획되어 있다.
+현재 데이터 이해, 전처리, baseline 모델링, 모델 실험과 최종 Test 평가를 완료했다. 재사용 가능한 패키징, 배치 추론과 오프라인 모니터링은 이후 작업으로 계획되어 있다.
 
 ## Project Status
 
@@ -12,8 +12,8 @@
 |---|---|
 | 문제와 데이터(1~3단계) | 완료 |
 | 4단계 — Baseline 모델링 | 완료 |
-| 5단계 — 모델 실험 | Sentinel을 분리한 baseline 기준으로 수정 진행 중 |
-| 6단계 — 최종 평가 | 수정된 모델 실험의 선택 결과 대기 |
+| 5단계 — 모델 실험 | 완료 |
+| 6단계 — 최종 평가 | 완료 |
 | 엔지니어링과 배포(7~9단계) | 미시작 |
 | 운영과 개선(10~12단계) | 미시작 |
 
@@ -21,7 +21,7 @@
 
 ## Key Validation Results
 
-Notebook 03은 `pdays`의 sentinel을 분리한 전처리로 새 커널에서 실행되었다. 아래 값은 현재의 **baseline Validation 결과**이며, 최종 모델 선택 결과나 Test 평가 결과가 아니다. 이번 한국어 문서 변경에서는 모델을 재실행하지 않았다.
+아래 값은 `pdays`의 sentinel을 분리한 **baseline Validation 결과**이다. 2026-10-26 Notebook 04에서 새 커널로 재현하고 tuned 후보와 비교한 뒤 이 baseline 구성을 최종 선택했다. Test 결과는 별도 절에 보고한다.
 
 | 후보 | Average Precision | ROC-AUC | Lift@10% |
 |---|---:|---:|---:|
@@ -29,7 +29,22 @@ Notebook 03은 `pdays`의 sentinel을 분리한 전처리로 새 커널에서 �
 
 상위 10% 용량에서 baseline은 Validation 가입 레코드 1,142개 중 309개를 상위 824개 안에 배치한다. Precision@10%는 `0.375000`, Recall@10%는 `0.270578`이다.
 
-이전의 원본 `pdays` baseline AP는 `0.297231`이었다. 현재 표현은 AP가 `0.008997` 낮아졌지만, 변수의 의미를 보존하기 위해 sentinel 여부와 경과 일수를 분리한다. Notebook 04에서 이 baseline을 재현했으며, 모델 계열 비교 코드는 작성했지만 실행하지 않았다. Tuning과 최종 선택은 아직 남아 있다. Test는 최종 평가를 위해 보류한다.
+이전의 원본 `pdays` baseline AP는 `0.297231`이었다. 현재 표현은 AP가 `0.008997` 낮아졌지만, 변수의 의미를 보존하기 위해 sentinel 여부와 경과 일수를 분리한다. Notebook 04의 모델 비교와 제한된 tuning에서도 이 baseline을 대체할 근거를 얻지 못했다. 구성과 평가 규칙을 확정한 뒤 Notebook 05에서 Test를 한 번 평가했다.
+
+## Final Test Results
+
+2026-10-26에 확정한 Logistic Regression Pipeline을 Train+Validation 37,069행에 새로 학습하고 Test 4,119행에서 한 번 평가했다.
+
+| 지표 | Test 결과 |
+|---|---:|
+| 양성 비율 | 0.459335 |
+| Average Precision | 0.549042 |
+| ROC-AUC | 0.620009 |
+| Precision@10% | 0.512136 |
+| Recall@10% | 0.111522 |
+| Lift@10% | 1.114951 |
+
+상위 10%의 412개 레코드 안에 가입 레코드 211개를 포함한다. Validation보다 높은 AP는 성능 개선의 근거가 아니다. 양성 비율이 13.86%에서 45.93%로 크게 증가했고 최종 학습 범위도 다르다. Test 전체 가입 비율 대비 상위 10%의 Lift는 약 1.11로, 후기 기간의 순위 성능은 제한적이다. 결과로 모델을 다시 조정하지 않았다.
 
 ## Problem Definition
 
@@ -107,7 +122,9 @@ UCI Bank Marketing 데이터셋의 `bank-additional-full.csv`를 사용한다.
 
 과거 실험에서는 Train 내부의 확장형 `TimeSeriesSplit` fold 4개로 모델 계열과 hyperparameter를 비교한 뒤, 소수 후보를 Validation에서 비교했다. 원본 `pdays`를 사용한 당시 선택은 수정된 표현 정책에 따라 대체되었으며 현재 최종 구성으로 사용할 수 없다.
 
-현재는 동일한 sentinel 전처리와 Train 내부 fold를 사용해 Logistic Regression, Random Forest, RBF SVM을 비교하는 코드를 작성했으며 실행은 대기 중이다. 모든 후보와 fold에 sentinel을 분리한 전처리를 적용해 비교와 tuning을 다시 수행해야 한다. 최종 평가를 위한 구성은 아직 확정하지 않았다. 모델과 평가 규칙을 확정한 뒤 모든 학습 단계를 Train+Validation에서 다시 fit하고 Test를 한 번 평가한다.
+수정된 실험에서는 동일한 sentinel 전처리와 Train 내부 fold로 Logistic Regression, Random Forest, RBF SVM을 비교했다. 초기 CV 평균 AP는 각각 `0.083139`, `0.066477`, `0.060447`이었다. Logistic Regression과 Random Forest를 제한된 grid로 tuning했다.
+
+Validation AP는 baseline `0.288234`, tuned Logistic Regression `0.282831`, tuned Random Forest `0.160494`였다. AP 차이 0.005 이내이면 Lift@10%를 비교하고, Lift 상대 차이도 2% 이내이면 단순성을 우선하는 기존 규칙에 따라 baseline을 선택했다. `LogisticRegression(C=1.0, solver="lbfgs", max_iter=1000, tol=0.0001)`과 기존 전처리·평가 규칙을 Test 접근 전에 확정했다. 이후 Train+Validation에서 새로 학습하고 Test를 평가했으며 결과로 재선택하지 않았다.
 
 ### Evaluation
 
@@ -131,7 +148,8 @@ bank-marketing-ml/
 │   ├── 01-data-understanding.ipynb
 │   ├── 02-preprocessing.ipynb
 │   ├── 03-baseline-modeling.ipynb
-│   └── 04-model-experiments.ipynb
+│   ├── 04-model-experiments.ipynb
+│   └── 05-final-evaluation.ipynb
 ├── scripts/
 │   └── download_data.py        # UCI 데이터 다운로드와 압축 해제
 ├── src/bank_marketing_ml/      # 패키지 골격; 재사용 코드 정리는 이후 진행
@@ -181,14 +199,15 @@ data/raw/bank-additional/bank-additional-full.csv
 uv run jupyter lab
 ```
 
-Notebook 01~03을 순서대로 확인한다. Notebook 04는 baseline 재현까지 실행했으며, 모델 계열 비교 코드는 실행 대기 중이고 tuning은 아직 구현하지 않았다.
+Notebook 01~05를 순서대로 확인한다. Notebook 04에는 모델 실험과 선택, Notebook 05에는 확정 구성의 최종 학습과 Test 평가 결과가 저장되어 있다.
 
 1. [데이터 이해](notebooks/01-data-understanding.ipynb)
 2. [전처리](notebooks/02-preprocessing.ipynb)
 3. [Baseline 모델링](notebooks/03-baseline-modeling.ipynb)
-4. [모델 실험](notebooks/04-model-experiments.ipynb) — 수정 진행 중
+4. [모델 실험](notebooks/04-model-experiments.ipynb)
+5. [최종 평가](notebooks/05-final-evaluation.ipynb)
 
-각 노트북은 데이터를 직접 로딩하며 새 커널에서 위에서 아래로 실행할 수 있어야 한다. Notebook 05와 정식 학습·점수 계산 명령은 아직 구현하지 않았다.
+각 노트북은 데이터를 직접 로딩하며 다른 노트북의 실행 상태에 의존하지 않는다. Notebook 04와 05는 새 커널에서 위에서 아래로 실행해 확인했다. Notebook 05의 Test는 이미 평가했으므로 이후 모델 tuning이나 재선택에 사용하지 않는다. 정식 학습·점수 계산 명령은 아직 구현하지 않았다.
 
 ## Verification
 
@@ -226,7 +245,7 @@ uv run ruff check .
 - 예측 시점의 거시경제 값 가용성, 발표 지연, 수정 이력은 운영 관점에서 확인해야 한다.
 - 확률 보정과 연락의 인과효과는 확인하지 않았다.
 - 연락 용량, 비용, 가입 가치, 업무 수용 기준은 정해지지 않았다.
-- 독립적인 Test 평가는 아직 완료하지 않았다.
+- 최종 Test 평가를 완료했지만 단일 후기 기간의 결과만으로 미래 안정성이나 운영 적합성을 입증할 수 없다.
 
 ## Roadmap
 
@@ -234,8 +253,8 @@ uv run ruff check .
 - [x] 2단계 — 데이터 이해
 - [x] 3단계 — 데이터 전처리
 - [x] 4단계 — Baseline 모델링
-- [ ] 5단계 — 모델 실험: sentinel을 분리한 baseline 기준으로 수정
-- [ ] 6단계 — 최종 평가
+- [x] 5단계 — 모델 실험
+- [x] 6단계 — 최종 평가
 - [ ] 7단계 — 리팩터링과 패키징
 - [ ] 8단계 — ML Pipeline과 출시 준비
 - [ ] 9단계 — 모델 배포와 통합
@@ -250,6 +269,7 @@ uv run ruff check .
 - [전처리](notebooks/02-preprocessing.ipynb): feature 그룹과 Train에서만 학습하는 전처리
 - [Baseline 모델링](notebooks/03-baseline-modeling.ipynb): baseline 학습과 Validation 평가
 - [모델 실험](notebooks/04-model-experiments.ipynb): 모델 비교, tuning, 분석, 최종 선택
+- [최종 평가](notebooks/05-final-evaluation.ipynb): 확정 구성의 Train+Validation 학습, Test 평가와 한계
 
 ## References
 
