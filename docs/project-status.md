@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-10-12
+Last updated: 2026-10-26
 
 This file is the cross-chat handoff for the 12-stage ML lifecycle. It records current progress, evidence, decisions, verification, and the next stage. Project methodology is documented in `README.md` and the relevant notebooks.
 
@@ -12,7 +12,7 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. It records cu
 | 1 — Problem & Data | 2. Data Understanding | Complete | `notebooks/01-data-understanding.ipynb` |
 | 1 — Problem & Data | 3. Data Preprocessing | Complete | `notebooks/02-preprocessing.ipynb` |
 | 2 — Model Development | 4. Baseline Modeling | Complete | `notebooks/03-baseline-modeling.ipynb` |
-| 2 — Model Development | 5. Model Experiments | Revision required | Historical `notebooks/04-model-experiments.ipynb` |
+| 2 — Model Development | 5. Model Experiments | Revision required | `notebooks/04-model-experiments.ipynb` (baseline reproduced; comparison pending) |
 | 2 — Model Development | 6. Final Evaluation | Pending revised Stage 5 | `notebooks/05-final-evaluation.ipynb` |
 | 3 — Engineering & Deployment | 7. Refactoring & Packaging | Not started | — |
 | 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Not started | — |
@@ -155,6 +155,16 @@ Primary evidence: `notebooks/03-baseline-modeling.ipynb`. Simplified from 25 to 
 
 **Current status: revision required.** The results below preserve the historical raw-`pdays` run. They are not current candidate comparisons under the revised policy. The prior Stage 6 freeze is superseded; no current final configuration is frozen. Revise Notebook 04 and rerun comparison and tuning with sentinel-aware preprocessing before proceeding to Stage 6.
 
+### Current Revision Progress — 2026-10-26
+
+- Notebook 04 has been rebuilt through baseline reproduction, preserving the learning outline. The historical raw-`pdays` results below remain superseded evidence; the prior notebook is available in Git history.
+- Fresh-kernel, top-to-bottom execution of all eight current code cells succeeded with `uv run --frozen --offline jupyter execute notebooks/04-model-experiments.ipynb --inplace --timeout=300`.
+- Newly verified Validation AP `0.288234`, ROC-AUC `0.688023`, and Lift@10% `2.705123` match Notebook 03 to six decimals. All five stored reference metric differences are below `5e-7`.
+- The complete sentinel-aware Pipeline was fitted on Train only. CSV loading stops at row 37,069; Test rows were not loaded or evaluated.
+- Model-family comparison, CV tuning, and final selection are still pending. No new final configuration is frozen.
+
+The following method, results, and verification describe the historical run.
+
 ### Objective and Method
 
 - Reproduce the Stage 4 baseline in the locked environment.
@@ -226,6 +236,6 @@ Validation temporal-block AP ranged from `0.094411` to `0.399525`. This is a dia
 
 ## Next Handoff — Stage 5 Revision
 
-Work in `notebooks/04-model-experiments.ipynb` plus necessary README/status documentation. Simplify the notebook to implementation and substantive interpretation, remove assertion suites and generic registry/validation scaffolding, and reproduce Notebook 03's sentinel-aware baseline (AP `0.288234`, ROC-AUC `0.688023`). Apply the same sentinel-aware preprocessing within every candidate Pipeline and time-aware training fold; do not reopen raw `pdays` as an eligible representation under the current policy.
+Work in `notebooks/04-model-experiments.ipynb` plus necessary README/status documentation. Simplify the notebook to implementation and substantive interpretation, remove assertion suites and generic registry/validation scaffolding, and retain the newly reproduced Notebook 03 sentinel-aware baseline (AP `0.288234`, ROC-AUC `0.688023`). Apply the same sentinel-aware preprocessing within every candidate Pipeline and time-aware training fold; do not reopen raw `pdays` as an eligible representation under the current policy.
 
 Rerun model comparison and bounded hyperparameter searches, evaluate frozen candidates on Validation, and record a new selection and configuration. Keep Test sealed. After Fresh Kernel execution and appropriate lint checks, update this handoff to Stage 6. Stage 6 then fits the newly frozen configuration on Train+Validation and evaluates Test once.

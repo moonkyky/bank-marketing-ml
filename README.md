@@ -29,7 +29,7 @@ Notebook 03 was rerun from a fresh kernel with sentinel-aware `pdays` preprocess
 
 At the top 10% capacity, the baseline ranks 309 of 1,142 observed Validation subscribers within 824 records. Precision@10% is `0.375000` and Recall@10% is `0.270578`.
 
-The earlier raw-`pdays` baseline recorded AP `0.297231`. The current representation separates sentinel status from elapsed days as a semantic constraint, despite the AP reduction of `0.008997`. Notebook 04 still contains the historical experiments and must be revised before final selection. Test remains reserved for Stage 6.
+The earlier raw-`pdays` baseline recorded AP `0.297231`. The current representation separates sentinel status from elapsed days as a semantic constraint, despite the AP reduction of `0.008997`. Notebook 04 now reproduces this baseline; model comparison and tuning remain pending before final selection. Test remains reserved for Stage 6.
 
 ## Problem Definition
 
@@ -181,7 +181,7 @@ Start Jupyter from the project root:
 uv run jupyter lab
 ```
 
-Run notebooks 01–03 in order. Notebook 04 is historical and awaits revision:
+Run notebooks 01–03 in order. Notebook 04 currently covers baseline reproduction; model comparison and tuning are pending:
 
 1. [Data Understanding](notebooks/01-data-understanding.ipynb)
 2. [Preprocessing](notebooks/02-preprocessing.ipynb)
