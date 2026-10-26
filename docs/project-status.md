@@ -161,7 +161,9 @@ Primary evidence: `notebooks/03-baseline-modeling.ipynb`. Simplified from 25 to 
 - Fresh-kernel, top-to-bottom execution of all eight current code cells succeeded with `uv run --frozen --offline jupyter execute notebooks/04-model-experiments.ipynb --inplace --timeout=300`.
 - Newly verified Validation AP `0.288234`, ROC-AUC `0.688023`, and Lift@10% `2.705123` match Notebook 03 to six decimals. All five stored reference metric differences are below `5e-7`.
 - The complete sentinel-aware Pipeline was fitted on Train only. CSV loading stops at row 37,069; Test rows were not loaded or evaluated.
-- Model-family comparison, CV tuning, and final selection are still pending. No new final configuration is frozen.
+- Model-family comparison is now implemented but unexecuted: Logistic Regression, Random Forest (`n_estimators=100`, `random_state=42`, one worker), and RBF SVM (`C=1.0`, `gamma="scale"`), using four expanding Train-only folds and cloned sentinel-aware Pipelines. SVM uses decision-function ranking scores without probability estimation.
+- The comparison records fold prevalence, AP, ROC-AUC, fit time, and score-generation time. No CV results or tuning decision are available yet; the baseline execution recorded above predates these new cells.
+- CV tuning and final selection are still pending. No new final configuration is frozen.
 
 The following method, results, and verification describe the historical run.
 
