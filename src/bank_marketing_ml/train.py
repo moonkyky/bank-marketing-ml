@@ -31,13 +31,29 @@ def train_and_save(
     if Path(source_csv).resolve() == Path(artifact_path).resolve():
         raise ValueError("The model artifact must not overwrite the training CSV.")
     train, validation = load_development_splits(source_csv)
-    features, target = prepare_xy(pd.concat([train, validation]))
+    return fit_and_save_development(
+        pd.concat([train, validation]),
+        artifact_path,
+        model_version=model_version,
+        training_source=Path(source_csv).name,
+    )
+
+
+def fit_and_save_development(
+    development: pd.DataFrame,
+    artifact_path: str | Path,
+    *,
+    model_version: str,
+    training_source: str,
+) -> Pipeline:
+    """Fit the frozen configuration on an already loaded Train+Validation frame."""
+    features, target = prepare_xy(development)
     pipeline = build_final_pipeline().fit(features, target)
     save_model(
         artifact_path,
         pipeline,
         model_version=model_version,
-        training_source=Path(source_csv).name,
+        training_source=training_source,
         training_rows=len(features),
     )
     return pipeline

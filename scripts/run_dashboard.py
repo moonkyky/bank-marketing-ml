@@ -90,7 +90,7 @@ def build_dashboard(workspace: Path, model_dir: Path) -> gr.Blocks:
             summary(f"{len(scores):,}", f"{scores.max():.4f}", f"{scores.mean():.4f}"),
             top_rows,
             result_path,
-            f"완료 · {len(scores):,}건을 처리했습니다.",
+            f"완료 · {len(scores):,}건 · {Path(source).name} · {model_name}",
         )
 
     with gr.Blocks(title="Bank Marketing ML", analytics_enabled=False) as dashboard:
@@ -148,6 +148,24 @@ def build_dashboard(workspace: Path, model_dir: Path) -> gr.Blocks:
             outputs=upload_options,
         )
 
+        outputs = [kpis, table, download, status]
+
+        def reset_results():
+            return summary(), [], gr.update(value=None, interactive=False), ""
+
+        gr.on(
+            triggers=[
+                source_kind.change,
+                upload.change,
+                model.change,
+                separator.change,
+            ],
+            fn=reset_results,
+            outputs=outputs,
+            concurrency_id="batch-results",
+            api_visibility="private",
+        )
+
         def on_run(source_kind, upload, model, separator):
             cards, rows, result, message = score(source_kind, upload, model, separator)
             return (
@@ -160,7 +178,8 @@ def build_dashboard(workspace: Path, model_dir: Path) -> gr.Blocks:
         run.click(
             on_run,
             inputs=[source_kind, upload, model, separator],
-            outputs=[kpis, table, download, status],
+            outputs=outputs,
+            concurrency_id="batch-results",
             api_name="score_batch",
         )
     return dashboard

@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import perf_counter
 
 import numpy as np
@@ -94,8 +95,14 @@ def batch_flow(
     source: Path, model: Path, output: Path, sep: str = ";", image: str | None = None
 ) -> dict:
     get_run_logger().info("Scoring with %s", model)
-    elapsed = run_cli(source, model, output, sep, image)
-    return check_batch(source, output, sep, elapsed)
+    _check_output_path(output, source, model)
+    with TemporaryDirectory(dir=output.parent, prefix=".bank-batch-") as staging:
+        candidate = Path(staging) / "scores.csv"
+        elapsed = run_cli(source, model, candidate, sep, image)
+        report = check_batch(source, candidate, sep, elapsed)
+        _check_output_path(output, source, model)
+        candidate.replace(output)
+    return report
 
 
 def main() -> None:

@@ -47,12 +47,12 @@ uv run --locked --group mlops python scripts/run_batch_flow.py \
   --image bank-marketing-batch:local
 ```
 
-Prefect는 CLI 실행과 출력 검사를 별도 작업으로 표시한다. 성공 로그에서 입력·출력 행 수, 처리 시간, 결과 크기, `job=unknown` 비율과 점수 중앙값을 확인할 수 있다. CLI가 실패하면 해당 작업이 실패로 표시되고 이후 출력 검사가 실행되지 않는다. 로컬 CLI를 사용하려면 `--image` 옵션을 생략한다. 이전 모델로 재실행할 때는 `--model`과 별도 `--output`을 지정한다.
+Prefect는 CLI 실행과 출력 검사를 별도 작업으로 표시한다. 성공 로그에서 입력·출력 행 수, 처리 시간, 결과 크기, `job=unknown` 비율과 점수 중앙값을 확인할 수 있다. 출력 검사를 통과한 뒤 최종 CSV를 교체한다. CLI나 출력 검사가 실패하면 이전 결과를 보존한다. 로컬 CLI를 사용하려면 `--image` 옵션을 생략한다. 이전 모델로 재실행할 때는 `--model`과 별도 `--output`을 지정한다.
 
 실행 이력을 대시보드에서 보려면 별도 터미널에서 `PREFECT_HOME="$PWD/artifacts/prefect" uv run --locked --group mlops prefect server start --host 127.0.0.1`을 실행한다. 배치 명령에 `PREFECT_API_URL=http://127.0.0.1:4200/api`를 설정하면 해당 서버에 연결된다.
 
 ## Verification Scope
 
-- GitHub Actions 워크플로는 Ruff, pytest, Docker 빌드와 CLI 진입점 검사를 정의한다.
+- GitHub Actions 워크플로는 Ruff, pytest와 Docker 빌드를 실행한다. 합성 데이터로 Gradio 결과 초기화, MLflow 모델 등록, Prefect가 실행하는 Docker 배치와 실패 시 출력 보존도 확인한다.
 - 배치에서 지표를 확인하는 범위는 로컬 실행이다. 정기 스케줄, 외부 알림과 클라우드 배포는 후속 운영 범위다.
 - 실제 라벨 기반 재학습과 교체 기준은 [진행 기록](project-status.md)의 Stage 11에 정리했다.

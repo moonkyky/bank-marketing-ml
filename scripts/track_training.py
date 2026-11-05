@@ -14,7 +14,7 @@ from mlflow.models import infer_signature
 from bank_marketing_ml.data import load_development_splits, prepare_xy
 from bank_marketing_ml.evaluate import evaluate_ranking
 from bank_marketing_ml.features import NUMERIC_FEATURES
-from bank_marketing_ml.train import build_final_pipeline, train_and_save
+from bank_marketing_ml.train import build_final_pipeline, fit_and_save_development
 
 
 def main() -> None:
@@ -67,7 +67,12 @@ def main() -> None:
         )
 
         candidate = Path(staging) / args.output.name
-        release = train_and_save(args.data, candidate, model_version=args.model_version)
+        release = fit_and_save_development(
+            development,
+            candidate,
+            model_version=args.model_version,
+            training_source=args.data.name,
+        )
         mlflow.log_artifact(str(candidate), artifact_path="batch")
         if args.register_as:
             schema_sample = x_train.head(1).astype(

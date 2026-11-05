@@ -17,8 +17,11 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.23"
-      - run: uv sync --locked
-      - run: uv run --locked ruff check .
-      - run: uv run --locked pytest
+          python-version: "3.12.15"
+      - run: uv sync --locked --group ui --group mlops
+      - run: uv run --locked --group ui --group mlops ruff check .
       - run: docker build --tag bank-marketing-batch:ci .
-      - run: docker run --rm bank-marketing-batch:ci --help
+      - run: uv run --locked --group ui --group mlops pytest
+        env:
+          BANK_MARKETING_TEST_IMAGE: bank-marketing-batch:ci
+          PREFECT_SERVER_ANALYTICS_ENABLED: "false"

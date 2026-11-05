@@ -84,6 +84,8 @@ PY
 
 `models/bank-marketing-v1.zip`에 학습된 전처리와 분류기, 입력 스키마, 버전 정보가 저장된다. ZIP에 포함된 pickle은 로딩할 때 코드를 실행할 수 있으므로 직접 생성했거나 출처를 신뢰하는 모델을 사용한다.
 
+보관한 모델 ZIP을 재사용하려면 저장 당시와 Python 패치 버전 및 주요 라이브러리 버전이 같아야 한다. 프로젝트에서 검증한 `v1` ZIP은 Python `3.12.15`를 사용했다. 기존 ZIP과 환경이 다르면 해당 버전으로 실행하거나, 사용할 환경에서 별도 경로에 모델을 다시 생성한다. Docker 배치 이미지도 Python `3.12.15`를 사용한다.
+
 ### 3. Score a CSV Batch
 
 아래 합성 레코드 두 건으로 배치 실행을 확인할 수 있다.
@@ -136,6 +138,7 @@ uv run --locked python scripts/simulate_monitoring.py --model models/bank-market
 | 데이터 준비와 전처리 | `uv run --locked pytest tests/test_data.py tests/test_pipeline.py` | 원본 행 순서와 분할 경계, `pdays` sentinel, 학습 때 없던 범주 처리 |
 | 순위 계산과 모델 저장 | `uv run --locked pytest tests/test_evaluate.py tests/test_release.py` | 동점 순서와 Top-K 지표, 저장 전후 점수 일치, 비호환 모델 거부 |
 | CSV 배치 CLI | `uv run --locked pytest tests/test_cli.py` | 입력 행과 결과의 대응, 실패 시 기존 출력 보호, 이전 모델로 롤백했을 때 결과 재현 |
+| 대시보드와 MLOps | `uv run --locked --group ui --group mlops pytest tests/test_optional_workflows.py` | 대시보드 결과 초기화, Prefect 검증 후 파일 교체, MLflow 후보 등록 |
 
 전체 테스트와 린트를 실행하려면 다음 명령을 사용한다.
 
