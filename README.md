@@ -4,7 +4,7 @@
 
 [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)을 사용해, 연락 가능한 용량이 제한된 상황에서 아웃바운드 마케팅 레코드의 우선순위를 정하는 데이터 누수 방지 중심의 머신러닝 워크플로를 개발한다.
 
-데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 확정 모델의 학습·저장·로딩과 로컬 CSV 배치 실행을 검증했다. 오프라인 모니터링은 이후 작업이다.
+데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 로컬 CSV 배치 실행을 검증하고 합성 데이터로 오프라인 모니터링을 시뮬레이션했다.
 
 ## Project Status
 
@@ -17,7 +17,8 @@
 | 7단계 — 리팩터링과 패키징 | 완료 |
 | 8단계 — 출시 준비 | 완료 |
 | 9단계 — 배포와 통합 | 완료 |
-| 운영과 개선(10~12단계) | 미시작 |
+| 10단계 — 오프라인 모니터링 | 완료 |
+| 운영과 개선(11~12단계) | 미시작 |
 
 상세 진행 상태, 결정, 검증과 다음 작업 인계는 [프로젝트 진행 기록](docs/project-status.md)에서 관리한다.
 
@@ -153,7 +154,8 @@ bank-marketing-ml/
 │   ├── 04-model-experiments.ipynb
 │   └── 05-final-evaluation.ipynb
 ├── scripts/
-│   └── download_data.py        # UCI 데이터 다운로드와 압축 해제
+│   ├── download_data.py        # UCI 데이터 다운로드와 압축 해제
+│   └── simulate_monitoring.py  # 합성 CSV 배치 모니터링 시뮬레이션
 ├── src/bank_marketing_ml/      # 재사용 가능한 모델링 모듈
 ├── tests/                      # 데이터 준비, Pipeline, 평가, 배치 통합 테스트
 ├── pyproject.toml
@@ -274,6 +276,16 @@ input_row,score,rank
 uv run bank-marketing-ml --input contacts.csv --model models/bank-marketing-v1.zip --output scores-v1.csv
 ```
 
+## Offline Monitoring
+
+출처를 신뢰하는 호환 모델 ZIP을 지정해 정상 배치, 필수 열 누락과 재실행, 입력 구성 변화, 10배 크기의 배치를 시뮬레이션한다. 합성 레코드만 사용하며, 각 배치는 기존 CLI 명령으로 실행한다.
+
+```bash
+uv run python scripts/simulate_monitoring.py --model models/bank-marketing-v1.zip
+```
+
+표준 출력의 JSON에서 실행 성공 여부, 입력·출력 행 수, 처리 시간, 결과 크기를 확인할 수 있다. 성공한 배치는 `job`의 `unknown` 비율, `cellular` 비율, 나이 중앙값과 점수 분위수를 비교한다. 지연 라벨 예시는 같은 배치의 `input_row`로 합성 가입 결과를 연결한 뒤 AP, ROC-AUC, Top-K 지표를 계산한다. 실측 결과와 점검 기준은 [프로젝트 진행 기록](docs/project-status.md)에 정리한다.
+
 ## Verification
 
 현재 제공되는 저장소 검사를 실행한다.
@@ -323,7 +335,7 @@ uv run ruff check .
 - [x] 7단계 — 리팩터링과 패키징
 - [x] 8단계 — ML Pipeline과 출시 준비
 - [x] 9단계 — 모델 배포와 통합
-- [ ] 10단계 — 운영 모니터링 시뮬레이션
+- [x] 10단계 — 운영 모니터링 시뮬레이션
 - [ ] 11단계 — 재학습과 지속적인 개선
 - [ ] 12단계 — 유지보수와 거버넌스
 
