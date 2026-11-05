@@ -19,7 +19,7 @@
 | 9단계 — 배포와 통합 | 완료 |
 | 10단계 — 오프라인 모니터링 | 완료 |
 | 11단계 — 재학습과 지속적인 개선 | 절차 수립 완료, 실제 비교는 신규 라벨 확보 후 |
-| 12단계 — 유지보수와 거버넌스 | 미시작 |
+| 12단계 — 유지보수와 거버넌스 | 완료 |
 
 상세 진행 상태, 결정, 검증과 다음 작업 인계는 [프로젝트 진행 기록](docs/project-status.md)에서 관리한다.
 
@@ -338,11 +338,12 @@ uv run ruff check .
 - [x] 9단계 — 모델 배포와 통합
 - [x] 10단계 — 운영 모니터링 시뮬레이션
 - [x] 11단계 — 재학습 검토, 시간순 백테스트와 교체·롤백 절차 수립
-- [ ] 12단계 — 유지보수와 거버넌스
+- [x] 12단계 — 유지보수와 거버넌스
 
 ## Documentation
 
 - [프로젝트 진행 기록](docs/project-status.md): 현재 진행 상태, 확인된 결정, 다음 작업 인계
+- [유지보수와 거버넌스](docs/maintenance.md)에서 버전 관리, 데이터·모델 파일 취급과 릴리스 점검 절차를 확인할 수 있다.
 - [데이터 이해](notebooks/01-data-understanding.ipynb): 데이터 확인, EDA, 누수 검토, 분할 설계
 - [전처리](notebooks/02-preprocessing.ipynb): feature 그룹과 Train에서만 학습하는 전처리
 - [Baseline 모델링](notebooks/03-baseline-modeling.ipynb): baseline 학습과 Validation 평가
