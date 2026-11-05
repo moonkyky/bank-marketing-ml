@@ -8,7 +8,7 @@ CSV 명단을 넣으면 Logistic Regression이 예정된 연락 직전의 정보
 
 ## Demo
 
-![Gradio 대시보드 시연. 합성 명단 12건을 처리하고 순위를 확인한 뒤 CSV를 내려받는다.](docs/media/dashboard-demo.gif)
+<img src="docs/media/dashboard-demo.gif" width="480" alt="Gradio 대시보드 시연. 합성 명단 12건을 처리하고 순위를 확인한 뒤 CSV를 내려받는다.">
 
 합성 명단 12건을 처리해 상위 10건을 확인하고, 전체 결과를 CSV로 내려받는 흐름이다.
 
