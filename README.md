@@ -56,6 +56,8 @@ cd bank-marketing-ml
 uv sync --locked
 ```
 
+설치가 끝나면 `uv.lock`에 맞춘 실행 환경에서 아래 명령을 사용할 수 있다.
+
 ### 2. Prepare the Model
 
 모델 ZIP은 Git에 포함되지 않는다. 호환되는 `models/bank-marketing-v1.zip`을 이미 보관하고 있다면 다음 절로 이동한다. 새로 생성할 때는 UCI 데이터를 내려받고, 원본 순서의 앞 37,069행(Train+Validation)으로 확정 Pipeline을 학습한다.
@@ -76,7 +78,7 @@ train_and_save(
 PY
 ```
 
-모델 ZIP에는 학습된 전처리와 분류기, 입력 스키마, 버전 정보가 들어 있다. ZIP에 포함된 pickle은 로딩할 때 코드를 실행할 수 있으므로 직접 생성했거나 출처를 신뢰하는 모델을 사용한다.
+`models/bank-marketing-v1.zip`에 학습된 전처리와 분류기, 입력 스키마, 버전 정보가 저장된다. ZIP에 포함된 pickle은 로딩할 때 코드를 실행할 수 있으므로 직접 생성했거나 출처를 신뢰하는 모델을 사용한다.
 
 ### 3. Score a CSV Batch
 
@@ -98,6 +100,8 @@ uv run bank-marketing-ml \
 cat artifacts/scores.csv
 ```
 
+`artifacts/scores.csv`에 결과 두 행이 저장된다. 두 번째 입력 레코드의 `rank`가 `1`인지 확인한다. [출력 예시](#demo)
+
 ### CSV Format
 
 | 항목 | 형식 |
@@ -116,17 +120,27 @@ cat artifacts/scores.csv
 합성 CSV로 정상 실행, 필수 열 누락과 복구, 입력 구성 변화, 대형 배치를 점검한다. JSON 결과에는 처리 건수와 시간, 입력·점수 분포, 합성 라벨을 연결한 순위 지표가 담긴다.
 
 ```bash
-uv run python scripts/simulate_monitoring.py --model models/bank-marketing-v1.zip
+uv run --locked python scripts/simulate_monitoring.py --model models/bank-marketing-v1.zip
 ```
 
 ## Verification
 
+자동 테스트는 합성 데이터와 테스트용 모델로 실행할 수 있다. 아래 명령은 저장소 루트에서 실행한다.
+
+| 확인할 동작 | 명령 | 검증 내용 |
+|---|---|---|
+| 데이터 준비와 전처리 | `uv run --locked pytest tests/test_data.py tests/test_pipeline.py` | 원본 행 순서와 분할 경계, `pdays` sentinel, 학습 때 없던 범주 처리 |
+| 순위 계산과 모델 저장 | `uv run --locked pytest tests/test_evaluate.py tests/test_release.py` | 동점 순서와 Top-K 지표, 저장 전후 점수 일치, 비호환 모델 거부 |
+| CSV 배치 CLI | `uv run --locked pytest tests/test_cli.py` | 입력 행과 결과의 대응, 실패 시 기존 출력 보호, 이전 모델로 롤백했을 때 결과 재현 |
+
+전체 테스트와 린트를 실행하려면 다음 명령을 사용한다.
+
 ```bash
-uv run pytest
-uv run ruff check .
+uv run --locked pytest
+uv run --locked ruff check .
 ```
 
-테스트는 합성 데이터로 분할과 전처리, 순위 지표, 모델 저장·로딩, CLI의 출력 보호와 롤백을 검증한다.
+로컬 `v1` ZIP으로 정상·실패·복구 흐름을 확인하려면 [Offline Monitoring](#offline-monitoring)을 실행한다. 모델의 예측 성능은 [Results](#results)의 최종 평가에서 확인할 수 있다.
 
 ## Repository Guide
 

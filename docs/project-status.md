@@ -2,7 +2,7 @@
 
 Last updated: 2026-11-05
 
-This file is the cross-chat handoff for the 12-stage ML lifecycle. It records current progress, evidence, decisions, verification, and the next stage. Project methodology is documented in `README.md` and the relevant notebooks.
+이 문서는 12단계의 결정, 검증 근거, 인계 사항을 기록한다. 프로젝트 소개와 실행 방법은 [README](../README.md)에 정리했다.
 
 ## Lifecycle Progress
 
@@ -16,10 +16,10 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. It records cu
 | 2 — Model Development | 6. Final Evaluation | Complete | `notebooks/05-final-evaluation.ipynb` |
 | 3 — Engineering & Deployment | 7. Refactoring & Packaging | Complete | `src/bank_marketing_ml/`, `tests/` |
 | 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Complete | `train.py`, `artifact.py`, `inference.py`, `tests/test_release.py` |
-| 3 — Engineering & Deployment | 9. Model Deployment & Integration | Not started | — |
-| 4 — Operations & Iteration | 10. Production Monitoring | Not started | — |
-| 4 — Operations & Iteration | 11. Retraining & Continuous Improvement | Not started | — |
-| 4 — Operations & Iteration | 12. Maintenance & Governance | Not started | — |
+| 3 — Engineering & Deployment | 9. Deployment & Integration | Complete | [CSV 배치 CLI](../src/bank_marketing_ml/cli.py), [통합 테스트](../tests/test_cli.py) |
+| 4 — Operations & Iteration | 10. Monitoring | Complete — offline simulation | [모니터링 시뮬레이션](../scripts/simulate_monitoring.py) |
+| 4 — Operations & Iteration | 11. Retraining & Improvement | Protocol complete — pending new-period labels | [재학습·교체 절차](#stage-11--retraining--improvement) |
+| 4 — Operations & Iteration | 12. Maintenance & Governance | Complete | [유지보수 문서](maintenance.md) |
 
 ## Invariant Modeling Decisions
 
@@ -412,3 +412,8 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 ### Project Review and Handoff
 
 로컬 CSV 배치 실행과 합성 데이터 기반 오프라인 모니터링까지 프로젝트 범위를 마무리했다. 실제 운영을 검토할 경우 새 기간의 라벨과 관측 범위, 예측 시점의 입력 가용성, 업무 연락 용량, 데이터 취급 책임을 먼저 확정한다. 새 라벨이 확보되면 11단계의 시간순 백테스트로 후보를 비교한다. 이번 점검에서 모델 재학습과 기존 Test 재평가는 수행하지 않았다.
+
+### Portfolio Documentation
+
+- README에서 문제와 평가 결과, 설계 결정, 합성 CSV 시연을 먼저 볼 수 있게 정리했다. 로컬 `v1` ZIP으로 시연을 실행해 출력 두 행과 순위가 문서 예시와 일치함을 확인했다.
+- Quick Start에 단계별 결과를 명시하고 Verification에서 데이터·전처리, 순위·모델 저장, 배치 CLI 테스트 명령을 구분했다. `pytest --collect-only`에서 테스트 40개가 인식됐다. README 변경 시 테스트 본 실행과 모델 평가는 수행하지 않았다.
