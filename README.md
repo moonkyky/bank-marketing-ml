@@ -34,6 +34,8 @@ Validation과 Test의 가입 비율이 크게 달라 AP 차이만으로 성능 �
 
 ## Demo
 
+[MLOps 시연 영상 (약 1분, MP4)](docs/media/mlops-demo.mp4)에서 합성 명단으로 MLflow 모델 등록, Prefect의 Docker 배치 실행, 입력 오류 후 결과 파일 보존을 확인할 수 있다.
+
 아래 Quick Start의 합성 명단 두 건을 처리한 결과다. 점수는 표시용으로 소수점 여섯 자리까지 적었다.
 
 ```csv

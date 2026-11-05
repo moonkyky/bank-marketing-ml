@@ -428,3 +428,8 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 - 전체 pytest 40개, Ruff lint·format, 잠금 파일 일관성과 `git diff --check`를 확인했다. 로컬 `v1`으로 합성 명단 5행을 처리했을 때 WSL과 Docker 출력이 바이트 단위로 같았다. 별도 합성 학습으로 MLflow 지표 기록, 레지스트리 모델 로딩 및 ZIP과의 점수 일치를 확인했다.
 - MLflow에 기록한 합성 모델을 Prefect에서 Docker로 실행해 입력·출력 5행과 로컬 CLI 출력 일치를 확인했다. 필수 열 누락 배치에서는 Prefect 작업이 실패하고 기존 결과 파일이 보존됐다.
 - 정기 스케줄, 외부 알림, 클라우드 배포는 후속 운영 범위다. GitHub Actions 원격 실행, 실제 데이터 재학습과 최종 Test 재평가는 수행하지 않았다.
+
+### CI and Demo
+
+- 커밋 `ae655bd`의 첫 [GitHub Actions Verify 실행](https://github.com/moonkyky/bank-marketing-ml/actions/runs/42011199339)이 통과했다. 잠금 환경 설치, Ruff, pytest, Docker 이미지 빌드, 컨테이너 CLI 진입점을 검증했다.
+- [시연 영상](media/mlops-demo.mp4)은 합성 데이터의 실제 명령 출력을 편집해 MLflow 기록, Prefect의 Docker 배치와 필수 열 누락 시 기존 결과 보존을 보여 준다.
