@@ -1,10 +1,26 @@
 # Bank Marketing ML
 
-**정기예금 캠페인에서 누구에게 먼저 연락할지 정하는 순위 모델.**
+**정기예금 캠페인에서 누구에게 먼저 연락할지 정하는 배치 순위 모델.**
 
-연락할 수 있는 건수가 제한된 상황을 가정한다. UCI Bank Marketing 데이터로 Logistic Regression을 학습하고, 예정된 연락 직전에 확보할 수 있는 정보로 각 레코드에 점수를 매긴다. 저장한 모델은 로컬 CLI에서 새 명단을 처리해 점수와 순위를 CSV로 반환한다. [데이터 출처](https://archive.ics.uci.edu/dataset/222/bank+marketing)
+CSV 명단을 넣으면 Logistic Regression이 예정된 연락 직전의 정보를 바탕으로 점수와 순위를 계산한다. Gradio에서 상위 후보를 확인하고 전체 결과를 내려받을 수 있다. [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)
 
-[평가 결과](#results) · [설계 결정](#approach) · [실행 예시](#demo) · [빠른 실행](#quick-start)
+[시연](#demo) · [평가 결과](#results) · [빠른 실행](#quick-start) · [MLOps 실행 가이드](docs/mlops.md)
+
+## Demo
+
+![Gradio 대시보드 시연. 합성 명단 12건을 처리하고 순위를 확인한 뒤 CSV를 내려받는다.](docs/media/dashboard-demo.gif)
+
+합성 명단을 처리해 상위 10건을 확인하고, 전체 결과를 CSV로 내려받는 흐름이다. 필수 열이 누락된 CSV를 넣었을 때는 실행 상태에 원인이 표시된다.
+
+### Local Dashboard
+
+[모델 ZIP을 준비](#2-prepare-the-model)한 뒤 프로젝트 루트에서 실행한다.
+
+```bash
+uv run --locked --group ui python scripts/run_dashboard.py
+```
+
+[로컬 대시보드](http://127.0.0.1:7860)에서 **합성 예제 → 순위 계산**을 선택한다. 직접 준비한 명단은 **CSV 업로드**에서 최대 5 MB까지 올릴 수 있다. 모델은 `models/`에 보관한 호환 ZIP에서 선택한다. 포트가 사용 중이면 `--port 7861`을 추가한다.
 
 ## Results
 
@@ -31,30 +47,6 @@ Validation과 Test의 가입 비율이 크게 달라 AP 차이만으로 성능 �
 | **Logistic Regression baseline 선택** | Validation AP는 baseline 0.2882, 튜닝한 Logistic Regression 0.2828, 튜닝한 Random Forest 0.1605였다. 기본 구성이 비교 후보 중 AP가 가장 높았다. |
 
 수치형 입력은 표준화하고 범주형 입력은 one-hot encoding한다. 모델과 평가 규칙을 확정한 뒤 Train+Validation에서 새로 학습해 Test를 한 번 평가했다. 과거 EDA에서 Test 타깃 집계는 확인했으며, 후보 선택과 튜닝에는 Validation을 사용했다. [모델 실험 노트북](notebooks/04-model-experiments.ipynb) · [상세 실험 기록](docs/project-status.md)
-
-## Demo
-
-[MLOps 시연 영상 (약 1분, MP4)](docs/media/mlops-demo.mp4)에서 합성 명단으로 MLflow 모델 등록, Prefect의 Docker 배치 실행, 입력 오류 후 결과 파일 보존을 확인할 수 있다.
-
-### Local Dashboard
-
-[모델 ZIP을 준비](#2-prepare-the-model)한 뒤 Gradio 화면을 실행한다.
-
-```bash
-uv run --locked --group ui python scripts/run_dashboard.py
-```
-
-브라우저에서 [로컬 대시보드](http://127.0.0.1:7860)를 열고 **합성 예제 → 순위 계산**을 선택한다. 직접 준비한 명단은 **CSV 업로드**에서 최대 5 MB까지 올릴 수 있다. 화면에는 상위 10건을 표시하고, 다운로드 파일에는 전체 결과가 입력 행 순서로 담긴다. 모델은 `models/`에 보관한 호환 ZIP에서 선택한다. 포트가 사용 중이면 실행 명령에 `--port 7861`을 추가한다.
-
-아래 Quick Start의 합성 명단 두 건을 처리한 결과다. 점수는 표시용으로 소수점 여섯 자리까지 적었다.
-
-```csv
-input_row,score,rank
-1,0.098937,2
-2,0.274114,1
-```
-
-두 번째 레코드의 우선순위가 가장 높다. 결과 CSV는 입력 행 순서를 유지하며, `input_row`로 원본 명단의 레코드를 찾을 수 있다.
 
 ## Quick Start
 
@@ -112,7 +104,7 @@ uv run bank-marketing-ml \
 cat artifacts/scores.csv
 ```
 
-`artifacts/scores.csv`에 결과 두 행이 저장된다. 두 번째 입력 레코드의 `rank`가 `1`인지 확인한다. [출력 예시](#demo)
+`artifacts/scores.csv`에 결과 두 행이 저장된다. 두 번째 입력 레코드의 `rank`가 `1`인지 확인한다.
 
 ### CSV Format
 

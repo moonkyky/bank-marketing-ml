@@ -432,4 +432,5 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 ### CI and Demo
 
 - 커밋 `ae655bd`의 첫 [GitHub Actions Verify 실행](https://github.com/moonkyky/bank-marketing-ml/actions/runs/42011199339)이 통과했다. 잠금 환경 설치, Ruff, pytest, Docker 이미지 빌드, 컨테이너 CLI 진입점을 검증했다.
-- [시연 영상](media/mlops-demo.mp4)은 합성 데이터의 실제 명령 출력을 편집해 MLflow 기록, Prefect의 Docker 배치와 필수 열 누락 시 기존 결과 보존을 보여 준다.
+- 초기 시연은 MLflow 기록, Prefect의 Docker 배치와 필수 열 누락 시 기존 결과 보존을 터미널 출력으로 보여 줬다.
+- 현재 README는 [Gradio 대시보드 시연](media/dashboard-demo.gif)을 본문에 표시한다. 실제 브라우저에서 합성 명단 12건 처리, 상위 후보 확인, 전체 CSV 다운로드, 필수 열 누락 오류와 예제로 복구하는 흐름을 녹화했다. 다운로드한 CSV는 12행이며 입력 레코드 7번이 1위였다.
