@@ -4,7 +4,7 @@
 
 [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)을 사용해, 연락 가능한 용량이 제한된 상황에서 아웃바운드 마케팅 레코드의 우선순위를 정하는 데이터 누수 방지 중심의 머신러닝 워크플로를 개발한다.
 
-데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 확정 모델의 학습·저장·로딩과 CSV 점수 계산을 검증했다. 명령줄 배치 실행과 오프라인 모니터링은 이후 작업이다.
+데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 확정 모델의 학습·저장·로딩과 로컬 CSV 배치 실행을 검증했다. 오프라인 모니터링은 이후 작업이다.
 
 ## Project Status
 
@@ -16,7 +16,7 @@
 | 6단계 — 최종 평가 | 완료 |
 | 7단계 — 리팩터링과 패키징 | 완료 |
 | 8단계 — 출시 준비 | 완료 |
-| 9단계 — 배포와 통합 | 미시작 |
+| 9단계 — 배포와 통합 | 완료 |
 | 운영과 개선(10~12단계) | 미시작 |
 
 상세 진행 상태, 결정, 검증과 다음 작업 인계는 [프로젝트 진행 기록](docs/project-status.md)에서 관리한다.
@@ -155,7 +155,7 @@ bank-marketing-ml/
 ├── scripts/
 │   └── download_data.py        # UCI 데이터 다운로드와 압축 해제
 ├── src/bank_marketing_ml/      # 재사용 가능한 모델링 모듈
-├── tests/                      # 데이터 준비, Pipeline, 평가 테스트
+├── tests/                      # 데이터 준비, Pipeline, 평가, 배치 통합 테스트
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
@@ -169,8 +169,9 @@ bank-marketing-ml/
 | `features.py` | 원본 예측 변수 19개와 sentinel-aware 전처리 |
 | `train.py` | Notebook 05와 같은 설정의 미학습 Pipeline 생성 |
 | `evaluate.py` | AP·ROC-AUC·양성 비율과 Top-5/10/20% 지표 계산 |
+| `cli.py` | CSV 배치 명령, 레코드 순위 산정, 결과 파일 저장 |
 
-예를 들어 `from bank_marketing_ml.train import build_final_pipeline`으로 확정 모델 구성을 불러올 수 있다. 함수는 학습되지 않은 새 Pipeline을 반환한다. 모델 저장·로딩과 CSV 점수 계산은 Python 함수로 제공하며, 정식 CLI는 아직 제공하지 않는다. Notebook 01~05는 기존 실험 기록으로 보존한다.
+예를 들어 `from bank_marketing_ml.train import build_final_pipeline`으로 확정 모델 구성을 불러올 수 있다. 함수는 학습되지 않은 새 Pipeline을 반환한다. Notebook 01~05는 기존 실험 기록으로 보존한다.
 
 ## Getting Started
 
@@ -241,9 +242,37 @@ train_and_save(
 scores = score_csv("new-contacts.csv", artifact, sep=",")
 ```
 
-CSV에는 확정된 입력 열 19개가 필요하다. 추가 열은 무시하므로 `y`나 `duration`은 필요하지 않다. 기본 구분자는 `;`이며 쉼표 CSV는 `sep=","`를 전달한다. 필수 열 누락·중복, 잘못된 행 길이, 비어 있거나 잘못된 값은 오류로 처리한다. 비어 있지 않은 새 범주는 기존 인코더 정책으로 처리한다. 점수는 원본 행 순서로 반환하며, 순위와 결과 CSV를 만드는 명령은 이후 통합 단계에서 제공한다.
+CSV에는 확정된 입력 열 19개가 필요하다. 추가 열은 무시하므로 `y`나 `duration`은 필요하지 않다. 기본 구분자는 `;`이며 쉼표 CSV는 `sep=","`를 전달한다. 필수 열 누락·중복, 잘못된 행 길이, 비어 있거나 잘못된 값은 오류로 처리한다. 비어 있지 않은 새 범주는 기존 인코더 정책으로 처리한다. 점수는 원본 행 순서로 반환한다.
 
 모델 파일은 직접 만들었거나 출처를 신뢰하는 파일만 로딩한다. 내부의 pickle은 로딩 시 코드를 실행할 수 있으며 체크섬은 파일 손상 확인용이다. 학습과 점수 계산에는 같은 잠금 환경을 사용한다. `models/`는 Git에서 제외된다. 같은 저장 경로로 재학습하면 기존 파일을 교체하므로, 이전 모델을 보존하려면 새 버전 경로를 사용한다.
+
+## Score a CSV Batch
+
+저장소 루트에서 입력 CSV, 출처를 신뢰하는 로컬 모델 ZIP, 결과 경로를 지정한다. 입력 구분자는 기본적으로 세미콜론이며, 쉼표 입력에는 `--sep ','`를 추가한다.
+
+```bash
+uv run bank-marketing-ml --input contacts.csv --model models/bank-marketing-v1.zip --output scores.csv
+uv run bank-marketing-ml --input contacts-comma.csv --sep ',' --model models/bank-marketing-v1.zip --output scores-comma.csv
+```
+
+출력은 UTF-8 쉼표 CSV이며 입력 레코드 순서를 유지한다. `input_row`는 헤더와 빈 줄을 제외한 1부터 시작하는 레코드 번호다. `rank`는 반올림 전 점수의 내림차순으로 부여하며 동점은 먼저 나온 레코드가 앞선다. 다음 점수는 형식 예시다.
+
+```csv
+input_row,score,rank
+1,0.12,3
+2,0.47,1
+3,0.47,2
+```
+
+출력 디렉터리는 실행 전에 준비한다. 성공하면 완성된 CSV로 기존 결과 파일을 교체한다. 입력 CSV나 모델 ZIP을 가리키는 경로는 출력으로 사용할 수 없다. 실행 실패 시 표준 오류에 원인을 표시하고 종료 코드 `1`을 반환하며 기존 결과를 보존한다. 명령 사용 오류의 종료 코드는 `2`다.
+
+### Rollback
+
+모델마다 별도 ZIP 경로를 사용해 이전 버전을 보관한다. 예를 들어 `v2`에서 `v1`으로 돌아가려면 같은 입력으로 다시 실행하면서 `--model`에 이전 ZIP을 지정한다. 이전 모델도 현재 실행 환경의 호환성 검사를 통과해야 한다.
+
+```bash
+uv run bank-marketing-ml --input contacts.csv --model models/bank-marketing-v1.zip --output scores-v1.csv
+```
 
 ## Verification
 
@@ -254,7 +283,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-테스트는 합성 데이터로 원본 순서와 분할 경계, 입력·target 분리, `pdays` sentinel, 미관측 범주, 점수 동점과 Top-K 계산을 확인한다. 저장 전후와 별도 프로세스의 점수 일치, 입력·모델 오류 처리도 검증한다. 테스트에 원본 데이터 다운로드나 최종 Test 재평가는 필요하지 않다.
+테스트는 합성 데이터로 원본 순서와 분할 경계, 입력·target 분리, `pdays` sentinel, 미관측 범주, 점수 동점과 Top-K 계산을 확인한다. 저장 전후 점수 일치와 입력·모델 오류 처리에 더해, 실제 CLI 명령으로 출력 보호와 모델 경로 전환을 검증한다. 테스트에 원본 데이터 다운로드, 로컬 모델 ZIP, 최종 Test 재평가는 필요하지 않다.
 
 ## Intended Use
 
@@ -293,7 +322,7 @@ uv run ruff check .
 - [x] 6단계 — 최종 평가
 - [x] 7단계 — 리팩터링과 패키징
 - [x] 8단계 — ML Pipeline과 출시 준비
-- [ ] 9단계 — 모델 배포와 통합
+- [x] 9단계 — 모델 배포와 통합
 - [ ] 10단계 — 운영 모니터링 시뮬레이션
 - [ ] 11단계 — 재학습과 지속적인 개선
 - [ ] 12단계 — 유지보수와 거버넌스

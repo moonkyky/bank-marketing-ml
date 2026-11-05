@@ -324,8 +324,23 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 - 실제 Train+Validation 37,069행으로 `models/bank-marketing-v1.zip`을 생성했다. Git에서 제외한 로컬 파일이다. 개발 구간에서 뽑은 점검용 네 행의 점수가 저장 전과 별도 프로세스 로딩 후 정확히 일치했다. 성능 지표를 새로 측정하거나 Test를 재평가하지 않았다.
 - Ruff lint·format 및 diff 검사 통과. Notebook과 잠금 의존성은 변경하지 않았다.
 
-## Next Handoff — Stage 9 Deployment & Integration
+## Stage 9 — Deployment & Integration
 
-검증한 학습·저장·점수 계산 기능을 로컬 CSV Batch CLI에 연결한다. 점수·순위 CSV, 실패 시 출력 처리, 이전 모델 버전 지정과 롤백을 통합 검증한다.
+**Current status: complete — 2026-11-05.** `bank-marketing-ml` 명령에서 입력 CSV, 모델 ZIP, 출력 경로를 받아 기존 `score_csv`를 실행한다. 기본 입력은 세미콜론이며 `--sep ','`로 쉼표 입력을 지정한다.
+
+- 결과는 UTF-8 쉼표 CSV이며 입력 레코드 순서로 `input_row`, `score`, `rank`를 쓴다. 순위는 반올림 전 점수의 내림차순이며 정확히 같은 점수는 입력 순서를 따른다.
+- 입력 또는 모델과 동일한 파일을 출력으로 지정하면 거부한다. 결과는 대상 디렉터리에서 임시 파일에 완전히 기록한 후 교체한다. 입력·모델·출력 오류는 표준 오류에 표시하고 실패 종료 코드를 반환한다.
+- 롤백은 보존한 이전 ZIP을 `--model`로 명시하고 같은 입력을 다시 처리한다. 이전 ZIP도 현재 실행 환경과 호환되어야 한다.
+
+### Verification
+
+- `uv run --no-cache --locked --offline pytest -q` 통과. 전체 40개 중 CLI 통합 테스트 12개가 두 입력 구분자, 원본 행 추적, 동점과 미세한 점수 차이, 입력·모델 오류, 기존 출력 보호, 출력 교체 실패 후 정리, 경로 별칭 차단을 확인했다.
+- 합성 모델로 `v1 → v2 → v1` 전환을 실행했다. `v2`에서 결과가 달라졌고, `v1`을 다시 선택하자 첫 CSV가 바이트 단위로 재현됐다.
+- 로컬 `models/bank-marketing-v1.zip`으로 합성 입력 3행을 처리해 출력 3행과 순위를 확인했다. 실제 데이터 재학습이나 Test 재평가는 수행하지 않았다.
+- 저장소 전체 Ruff lint, 변경한 Python 파일의 Ruff format 검사, `git diff --check` 통과.
+
+## Next Handoff — Stage 10 Monitoring
+
+9단계 CLI와 출력 계약을 기준으로 오프라인 모니터링을 설계한다. 배치 성공·실패와 처리량, 입력 품질, 데이터와 점수 분포 변화, 라벨이 확보된 배치의 순위 성능, 처리 비용을 점검할 기준과 시뮬레이션 데이터를 정한다.
 
 기존 Test는 이미 평가됐다. 같은 Test로 tuning하거나 재선택하지 않는다. 새 모델 개선에는 새로운 기간의 데이터 또는 별도로 설계한 backtest와 평가 계획이 필요하다.

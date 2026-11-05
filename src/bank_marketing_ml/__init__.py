@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from bank-marketing-ml!")
+"""Bank marketing record ranking package."""
