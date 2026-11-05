@@ -4,7 +4,7 @@
 
 [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)을 사용해, 연락 가능한 용량이 제한된 상황에서 아웃바운드 마케팅 레코드의 우선순위를 정하는 데이터 누수 방지 중심의 머신러닝 워크플로를 개발한다.
 
-현재 데이터 이해, 전처리, baseline 모델링, 모델 실험과 최종 Test 평가를 완료했다. 재사용 가능한 패키징, 배치 추론과 오프라인 모니터링은 이후 작업으로 계획되어 있다.
+데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 모델 저장·로딩, 배치 추론과 오프라인 모니터링은 이후 작업이다.
 
 ## Project Status
 
@@ -14,7 +14,8 @@
 | 4단계 — Baseline 모델링 | 완료 |
 | 5단계 — 모델 실험 | 완료 |
 | 6단계 — 최종 평가 | 완료 |
-| 엔지니어링과 배포(7~9단계) | 미시작 |
+| 7단계 — 리팩터링과 패키징 | 완료 |
+| 출시 준비와 배포(8~9단계) | 미시작 |
 | 운영과 개선(10~12단계) | 미시작 |
 
 상세 진행 상태, 결정, 검증과 다음 작업 인계는 [프로젝트 진행 기록](docs/project-status.md)에서 관리한다.
@@ -152,14 +153,23 @@ bank-marketing-ml/
 │   └── 05-final-evaluation.ipynb
 ├── scripts/
 │   └── download_data.py        # UCI 데이터 다운로드와 압축 해제
-├── src/bank_marketing_ml/      # 패키지 골격; 재사용 코드 정리는 이후 진행
-├── tests/                      # 현재 최소한의 smoke test
+├── src/bank_marketing_ml/      # 재사용 가능한 모델링 모듈
+├── tests/                      # 데이터 준비, Pipeline, 평가 테스트
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
 ```
 
-재사용 가능한 모듈과 의미 있는 단위·통합 테스트는 코드 리팩터링과 패키징 과정에서 구축한다. 현재 `src/` 진입점과 smoke test는 초기 골격이며, 출시된 학습·추론 인터페이스가 아니다.
+## Reusable Python Modules
+
+| 모듈 | 역할 |
+|---|---|
+| `data.py` | 원본 CSV의 Train·Validation 구간 로딩, 입력과 이진 target 분리 |
+| `features.py` | 원본 예측 변수 19개와 sentinel-aware 전처리 |
+| `train.py` | Notebook 05와 같은 설정의 미학습 Pipeline 생성 |
+| `evaluate.py` | AP·ROC-AUC·양성 비율과 Top-5/10/20% 지표 계산 |
+
+예를 들어 `from bank_marketing_ml.train import build_final_pipeline`으로 확정 모델 구성을 불러올 수 있다. 함수는 학습되지 않은 새 Pipeline을 반환한다. 모델 파일 저장·로딩과 정식 학습·추론 CLI는 아직 제공하지 않는다. Notebook 01~05는 기존 실험 기록으로 보존한다.
 
 ## Getting Started
 
@@ -218,7 +228,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-현재 테스트 범위는 최소한이며 모델링 Pipeline을 검증하지 않는다. 코드 리팩터링과 패키징 과정에서 임시 테스트를 의미 있는 단위·통합 테스트로 대체할 계획이다.
+테스트는 합성 데이터로 원본 순서와 분할 경계, 입력·target 분리, `pdays` sentinel, 미관측 범주, 점수 동점과 Top-K 계산을 확인한다. 원본 데이터 다운로드나 최종 Test 재평가는 필요하지 않다.
 
 ## Intended Use
 
@@ -234,7 +244,7 @@ uv run ruff check .
 - 보정하지 않은 점수를 검증된 확률로 취급하는 것
 - 레코드 하나가 고유 고객 한 명이라고 단정하는 것
 - 운영 검증과 거버넌스 없이 실제 의사결정을 자동화하는 것
-- 현재 패키지 골격을 출시된 학습·추론 서비스로 사용하는 것
+- 현재 모델링 모듈을 출시된 학습·추론 서비스로 사용하는 것
 
 ## Limitations
 
@@ -255,7 +265,7 @@ uv run ruff check .
 - [x] 4단계 — Baseline 모델링
 - [x] 5단계 — 모델 실험
 - [x] 6단계 — 최종 평가
-- [ ] 7단계 — 리팩터링과 패키징
+- [x] 7단계 — 리팩터링과 패키징
 - [ ] 8단계 — ML Pipeline과 출시 준비
 - [ ] 9단계 — 모델 배포와 통합
 - [ ] 10단계 — 운영 모니터링 시뮬레이션

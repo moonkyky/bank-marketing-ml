@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-10-26
+Last updated: 2026-11-05
 
 This file is the cross-chat handoff for the 12-stage ML lifecycle. It records current progress, evidence, decisions, verification, and the next stage. Project methodology is documented in `README.md` and the relevant notebooks.
 
@@ -14,7 +14,7 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. It records cu
 | 2 — Model Development | 4. Baseline Modeling | Complete | `notebooks/03-baseline-modeling.ipynb` |
 | 2 — Model Development | 5. Model Experiments | Complete | `notebooks/04-model-experiments.ipynb` |
 | 2 — Model Development | 6. Final Evaluation | Complete | `notebooks/05-final-evaluation.ipynb` |
-| 3 — Engineering & Deployment | 7. Refactoring & Packaging | Not started | — |
+| 3 — Engineering & Deployment | 7. Refactoring & Packaging | Complete | `src/bank_marketing_ml/`, `tests/` |
 | 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Not started | — |
 | 3 — Engineering & Deployment | 9. Model Deployment & Integration | Not started | — |
 | 4 — Operations & Iteration | 10. Production Monitoring | Not started | — |
@@ -294,8 +294,24 @@ Validation보다 높은 Test AP를 개선으로 해석하지 않는다. 양성 �
 
 Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 흐름에 맞춰 Notebook 04/05를 정리했다. 제목은 영어, 설명은 한국어로 유지했다. Notebook 04는 64개에서 43개 셀로 줄여 인접한 설명을 묶고, Notebook 05는 데이터·Pipeline 준비 → 최종 학습 → 평가 → 요약 순서로 재구성했다. 요약 표에는 선택 구성과 주요 지표를 남기고 실행 이력·hash 의미는 이 문서에서 관리한다. 삭제 요청한 저장값 비교 절은 추가하지 않았다. 정책·파라미터·수치·출력의 변경 없이 편집했으며 새 실험 결과로 표현하지 않는다.
 
-## Next Handoff — Stage 7 Refactoring & Packaging
+## Stage 7 — Refactoring & Packaging
 
-모델 개발과 최종 평가를 완료했다. 다음 작업은 확정한 feature 변환과 순위 지표 등 안정된 로직을 재사용 가능한 Python 모듈로 옮기고 의미 있는 단위 테스트를 작성하는 것이다. 로컬 CSV Batch CLI 범위를 유지한다. 현재 노트북은 출시된 학습·추론 인터페이스가 아니며, artifact 관리·schema 검증·호환성·실패 동작은 이후 출시 준비에서 다룬다.
+**Current status: complete — 2026-11-05.** Notebook에서 확정한 로직을 기존 Python 패키지로 옮겼다. Notebook 코드와 저장 출력은 보존했다.
 
-현재 Test는 이미 평가되었다. 같은 Test를 다시 tuning이나 재선택에 사용해 독립 평가라고 주장하지 않는다. 새 모델 개선에는 새로운 기간의 데이터 또는 별도로 설계한 backtest와 평가 계획이 필요하다.
+- `data.py`: 원본 CSV의 앞 37,069행만 로딩해 Train 28,831행과 Validation 8,238행으로 분리한다. 확정한 19개 입력을 선택하고 `y`를 `no = 0`, `yes = 1`로 인코딩한다.
+- `features.py`, `train.py`: sentinel-aware 전처리와 확정한 Logistic Regression 설정으로 미학습 Pipeline을 생성한다. 호출할 때마다 독립적인 객체를 반환한다.
+- `evaluate.py`: 순서가 맞는 이진 label과 점수를 받아 AP, ROC-AUC, 양성 비율 및 Top-5/10/20% 지표를 계산한다. 기존의 올림, 반올림 전 점수, 동점 원본 순서, 평가 구간 양성 비율 기준을 유지한다.
+- 기존 smoke test를 데이터 준비, 전처리·모델 통합, 순위 계산 테스트로 대체했다. 패키지 설정과 잠금 의존성은 변경하지 않았다.
+
+### Verification
+
+- `uv run --locked --offline pytest -q`: 13개 통과. `ruff check .` 및 새 Python 코드의 format 검사 통과.
+- 합성 데이터에서 Notebook 05의 정의와 패키지 Pipeline의 모델 파라미터, 변환 feature 이름·값, 예측 점수가 정확히 일치했다.
+- Wheel 빌드 성공. 생성한 wheel에 네 모델링 모듈이 포함됨을 확인했다.
+- 원본 데이터를 로딩하거나 Notebook 04의 실험·Notebook 05의 Test를 재실행하지 않았다. 기존 성능 수치는 과거 실행 결과이며 이번 단계에서 다시 측정하지 않았다.
+
+## Next Handoff — Stage 8 Release Readiness
+
+확정 Pipeline을 사용하는 학습·추론 흐름, 모델 artifact와 메타데이터, CSV 입력 schema 및 호환성 검사, 실패 동작을 구현하고 검증한다. 배포 대상은 로컬 CSV Batch CLI이며 CLI 통합은 다음 단계에서 다룬다.
+
+기존 Test는 이미 평가됐다. 같은 Test로 tuning하거나 재선택하지 않는다. 새 모델 개선에는 새로운 기간의 데이터 또는 별도로 설계한 backtest와 평가 계획이 필요하다.
