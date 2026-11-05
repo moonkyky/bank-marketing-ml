@@ -15,7 +15,7 @@ This file is the cross-chat handoff for the 12-stage ML lifecycle. It records cu
 | 2 — Model Development | 5. Model Experiments | Complete | `notebooks/04-model-experiments.ipynb` |
 | 2 — Model Development | 6. Final Evaluation | Complete | `notebooks/05-final-evaluation.ipynb` |
 | 3 — Engineering & Deployment | 7. Refactoring & Packaging | Complete | `src/bank_marketing_ml/`, `tests/` |
-| 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Not started | — |
+| 3 — Engineering & Deployment | 8. ML Pipeline & Release Readiness | Complete | `train.py`, `artifact.py`, `inference.py`, `tests/test_release.py` |
 | 3 — Engineering & Deployment | 9. Model Deployment & Integration | Not started | — |
 | 4 — Operations & Iteration | 10. Production Monitoring | Not started | — |
 | 4 — Operations & Iteration | 11. Retraining & Continuous Improvement | Not started | — |
@@ -310,8 +310,22 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 - Wheel 빌드 성공. 생성한 wheel에 네 모델링 모듈이 포함됨을 확인했다.
 - 원본 데이터를 로딩하거나 Notebook 04의 실험·Notebook 05의 Test를 재실행하지 않았다. 기존 성능 수치는 과거 실행 결과이며 이번 단계에서 다시 측정하지 않았다.
 
-## Next Handoff — Stage 8 Release Readiness
+## Stage 8 — ML Pipeline & Release Readiness
 
-확정 Pipeline을 사용하는 학습·추론 흐름, 모델 artifact와 메타데이터, CSV 입력 schema 및 호환성 검사, 실패 동작을 구현하고 검증한다. 배포 대상은 로컬 CSV Batch CLI이며 CLI 통합은 다음 단계에서 다룬다.
+**Current status: complete.** 확정 Pipeline을 Train+Validation에 학습해 저장하고, 별도 실행에서 불러와 CSV 점수를 계산하는 경로를 구현했다.
+
+- `train_and_save`는 기존 개발 구간 로더를 사용해 앞 37,069행만 학습한다. Test 행은 사용하지 않는다.
+- `artifact.py`는 Pipeline과 모델 버전, 학습 파일명·행 수, 입력 열·양성 클래스, 실행 환경 버전을 하나의 ZIP으로 저장한다. 로딩 전 형식·입력 schema·환경 버전·체크섬을 검사하고, 로딩 후 학습 상태와 입력·클래스 순서를 확인한다. 표준 라이브러리를 사용해 의존성은 변경하지 않았다. Pickle은 신뢰하는 로컬 모델 파일만 로딩하며 체크섬은 출처 검증 수단이 아니다.
+- `score_csv`는 레코드 순서를 보존하고 필수 열 누락·중복, 행 길이, 비수치 또는 무한값, 빈 범주를 검사한다. 추가 열을 무시하고 미관측 범주는 기존 정책으로 처리한다. 결과는 반올림하지 않은 점수이며 순위와 출력 CSV는 아직 생성하지 않는다.
+
+### Verification
+
+- 합성 데이터에서 학습, 저장, 별도 프로세스 로딩 및 점수 계산을 검증했다. 잘못된 CSV, 손상된 모델, 환경·schema 불일치도 검사했다. 전체 테스트 28개 통과.
+- 실제 Train+Validation 37,069행으로 `models/bank-marketing-v1.zip`을 생성했다. Git에서 제외한 로컬 파일이다. 개발 구간에서 뽑은 점검용 네 행의 점수가 저장 전과 별도 프로세스 로딩 후 정확히 일치했다. 성능 지표를 새로 측정하거나 Test를 재평가하지 않았다.
+- Ruff lint·format 및 diff 검사 통과. Notebook과 잠금 의존성은 변경하지 않았다.
+
+## Next Handoff — Stage 9 Deployment & Integration
+
+검증한 학습·저장·점수 계산 기능을 로컬 CSV Batch CLI에 연결한다. 점수·순위 CSV, 실패 시 출력 처리, 이전 모델 버전 지정과 롤백을 통합 검증한다.
 
 기존 Test는 이미 평가됐다. 같은 Test로 tuning하거나 재선택하지 않는다. 새 모델 개선에는 새로운 기간의 데이터 또는 별도로 설계한 backtest와 평가 계획이 필요하다.

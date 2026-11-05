@@ -4,7 +4,7 @@
 
 [UCI Bank Marketing 데이터셋](https://archive.ics.uci.edu/dataset/222/bank+marketing)을 사용해, 연락 가능한 용량이 제한된 상황에서 아웃바운드 마케팅 레코드의 우선순위를 정하는 데이터 누수 방지 중심의 머신러닝 워크플로를 개발한다.
 
-데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 모델 저장·로딩, 배치 추론과 오프라인 모니터링은 이후 작업이다.
+데이터 이해부터 최종 Test 평가까지 완료했으며, 확정된 모델링 로직을 재사용 가능한 Python 패키지로 정리했다. 확정 모델의 학습·저장·로딩과 CSV 점수 계산을 검증했다. 명령줄 배치 실행과 오프라인 모니터링은 이후 작업이다.
 
 ## Project Status
 
@@ -15,7 +15,8 @@
 | 5단계 — 모델 실험 | 완료 |
 | 6단계 — 최종 평가 | 완료 |
 | 7단계 — 리팩터링과 패키징 | 완료 |
-| 출시 준비와 배포(8~9단계) | 미시작 |
+| 8단계 — 출시 준비 | 완료 |
+| 9단계 — 배포와 통합 | 미시작 |
 | 운영과 개선(10~12단계) | 미시작 |
 
 상세 진행 상태, 결정, 검증과 다음 작업 인계는 [프로젝트 진행 기록](docs/project-status.md)에서 관리한다.
@@ -169,7 +170,7 @@ bank-marketing-ml/
 | `train.py` | Notebook 05와 같은 설정의 미학습 Pipeline 생성 |
 | `evaluate.py` | AP·ROC-AUC·양성 비율과 Top-5/10/20% 지표 계산 |
 
-예를 들어 `from bank_marketing_ml.train import build_final_pipeline`으로 확정 모델 구성을 불러올 수 있다. 함수는 학습되지 않은 새 Pipeline을 반환한다. 모델 파일 저장·로딩과 정식 학습·추론 CLI는 아직 제공하지 않는다. Notebook 01~05는 기존 실험 기록으로 보존한다.
+예를 들어 `from bank_marketing_ml.train import build_final_pipeline`으로 확정 모델 구성을 불러올 수 있다. 함수는 학습되지 않은 새 Pipeline을 반환한다. 모델 저장·로딩과 CSV 점수 계산은 Python 함수로 제공하며, 정식 CLI는 아직 제공하지 않는다. Notebook 01~05는 기존 실험 기록으로 보존한다.
 
 ## Getting Started
 
@@ -219,6 +220,31 @@ Notebook 01~05를 순서대로 확인한다. Notebook 04에는 모델 실험과 
 
 각 노트북은 데이터를 직접 로딩하며 다른 노트북의 실행 상태에 의존하지 않는다. Notebook 04와 05는 새 커널에서 위에서 아래로 실행해 확인했다. Notebook 05의 Test는 이미 평가했으므로 이후 모델 tuning이나 재선택에 사용하지 않는다. 정식 학습·점수 계산 명령은 아직 구현하지 않았다.
 
+## Train and Score from Python
+
+아래 코드는 저장소 루트에서 프로젝트의 Python 환경으로 실행한다. 학습은 원본 CSV의 앞 37,069행(Train+Validation)만 사용한다. 모델 파일에는 학습한 전처리와 estimator, 모델 버전, 학습 범위, 입력 열과 실행 환경 버전을 함께 저장한다.
+
+```python
+from pathlib import Path
+
+from bank_marketing_ml.inference import score_csv
+from bank_marketing_ml.train import train_and_save
+
+Path("models").mkdir(exist_ok=True)
+artifact = "models/bank-marketing-v1.zip"
+train_and_save(
+    "data/raw/bank-additional/bank-additional-full.csv",
+    artifact,
+    model_version="v1",
+)
+# 별도 실행에서 아래 함수만 호출해도 점수를 계산할 수 있다.
+scores = score_csv("new-contacts.csv", artifact, sep=",")
+```
+
+CSV에는 확정된 입력 열 19개가 필요하다. 추가 열은 무시하므로 `y`나 `duration`은 필요하지 않다. 기본 구분자는 `;`이며 쉼표 CSV는 `sep=","`를 전달한다. 필수 열 누락·중복, 잘못된 행 길이, 비어 있거나 잘못된 값은 오류로 처리한다. 비어 있지 않은 새 범주는 기존 인코더 정책으로 처리한다. 점수는 원본 행 순서로 반환하며, 순위와 결과 CSV를 만드는 명령은 이후 통합 단계에서 제공한다.
+
+모델 파일은 직접 만들었거나 출처를 신뢰하는 파일만 로딩한다. 내부의 pickle은 로딩 시 코드를 실행할 수 있으며 체크섬은 파일 손상 확인용이다. 학습과 점수 계산에는 같은 잠금 환경을 사용한다. `models/`는 Git에서 제외된다. 같은 저장 경로로 재학습하면 기존 파일을 교체하므로, 이전 모델을 보존하려면 새 버전 경로를 사용한다.
+
 ## Verification
 
 현재 제공되는 저장소 검사를 실행한다.
@@ -228,7 +254,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-테스트는 합성 데이터로 원본 순서와 분할 경계, 입력·target 분리, `pdays` sentinel, 미관측 범주, 점수 동점과 Top-K 계산을 확인한다. 원본 데이터 다운로드나 최종 Test 재평가는 필요하지 않다.
+테스트는 합성 데이터로 원본 순서와 분할 경계, 입력·target 분리, `pdays` sentinel, 미관측 범주, 점수 동점과 Top-K 계산을 확인한다. 저장 전후와 별도 프로세스의 점수 일치, 입력·모델 오류 처리도 검증한다. 테스트에 원본 데이터 다운로드나 최종 Test 재평가는 필요하지 않다.
 
 ## Intended Use
 
@@ -266,7 +292,7 @@ uv run ruff check .
 - [x] 5단계 — 모델 실험
 - [x] 6단계 — 최종 평가
 - [x] 7단계 — 리팩터링과 패키징
-- [ ] 8단계 — ML Pipeline과 출시 준비
+- [x] 8단계 — ML Pipeline과 출시 준비
 - [ ] 9단계 — 모델 배포와 통합
 - [ ] 10단계 — 운영 모니터링 시뮬레이션
 - [ ] 11단계 — 재학습과 지속적인 개선
