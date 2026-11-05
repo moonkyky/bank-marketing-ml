@@ -32,6 +32,9 @@ mlops = [
     "mlflow>=3,<4",
     "prefect>=3,<4",
 ]
+ui = [
+    "gradio>=6,<7",
+]
 
 [tool.ruff]
 line-length = 88

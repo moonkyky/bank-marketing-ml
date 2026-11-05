@@ -36,6 +36,16 @@ Validation과 Test의 가입 비율이 크게 달라 AP 차이만으로 성능 �
 
 [MLOps 시연 영상 (약 1분, MP4)](docs/media/mlops-demo.mp4)에서 합성 명단으로 MLflow 모델 등록, Prefect의 Docker 배치 실행, 입력 오류 후 결과 파일 보존을 확인할 수 있다.
 
+### Local Dashboard
+
+[모델 ZIP을 준비](#2-prepare-the-model)한 뒤 Gradio 화면을 실행한다.
+
+```bash
+uv run --locked --group ui python scripts/run_dashboard.py
+```
+
+브라우저에서 [로컬 대시보드](http://127.0.0.1:7860)를 열고 **합성 예제 → 순위 계산**을 선택한다. 직접 준비한 명단은 **CSV 업로드**에서 최대 5 MB까지 올릴 수 있다. 화면에는 상위 10건을 표시하고, 다운로드 파일에는 전체 결과가 입력 행 순서로 담긴다. 모델은 `models/`에 보관한 호환 ZIP에서 선택한다. 포트가 사용 중이면 실행 명령에 `--port 7861`을 추가한다.
+
 아래 Quick Start의 합성 명단 두 건을 처리한 결과다. 점수는 표시용으로 소수점 여섯 자리까지 적었다.
 
 ```csv
