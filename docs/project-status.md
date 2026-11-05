@@ -407,7 +407,7 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 - 로컬 `models/bank-marketing-v1.zip`의 모델 버전 `v1`, 포맷 버전 `1`, 학습 행 수 37,069를 확인했다. 저장 환경은 Python `3.12.15`, 패키지 `0.1.0`이며, 점검한 ZIP의 SHA-256은 `db4e13062d4b16d2ccc610b5526b38756bfb5b912353e103b45986f94597b4f4`다.
 - `uv lock --check --offline --no-cache`, 전체 pytest 40개, Ruff lint, `git diff --check` 통과. 이 잠금 파일 점검은 프로젝트 설정과의 일관성을 확인하며 외부 보안 공지 조회는 수행하지 않았다.
 - 로컬 `v1`과 합성 데이터로 10단계 시뮬레이션을 다시 실행했다. 기준·복구·구성 변화 배치는 각각 200행, 대형 배치는 2,000행을 처리했다. 필수 열 누락 배치는 종료 코드 1과 결과 0행을 확인했다.
-- `data/`, `models/`, `artifacts/`, `.venv/` 및 `.env`의 대표 경로가 Git에서 제외됨을 확인했다. 해당 범위에 추적 중인 파일은 예외로 허용한 `.env.example`뿐이다.
+- `data/`, `models/`, `artifacts/`, `.venv/` 및 `.env`의 대표 경로가 Git에서 제외됨을 확인했다. 사용하지 않는 빈 `.env.example`은 프로젝트 정리 시 제거했다.
 
 ### Project Review and Handoff
 
