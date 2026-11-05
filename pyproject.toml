@@ -28,6 +28,10 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
 ]
+mlops = [
+    "mlflow>=3,<4",
+    "prefect>=3,<4",
+]
 
 [tool.ruff]
 line-length = 88

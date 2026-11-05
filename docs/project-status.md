@@ -417,3 +417,14 @@ Notebook 01–03의 목적 → 준비 → 실행 결과 → 해석 → 요약 �
 
 - README에서 문제와 평가 결과, 설계 결정, 합성 CSV 시연을 먼저 볼 수 있게 정리했다. 로컬 `v1` ZIP으로 시연을 실행해 출력 두 행과 순위가 문서 예시와 일치함을 확인했다.
 - Quick Start에 단계별 결과를 명시하고 Verification에서 데이터·전처리, 순위·모델 저장, 배치 CLI 테스트 명령을 구분했다. `pytest --collect-only`에서 테스트 40개가 인식됐다. README 변경 시 테스트 본 실행과 모델 평가는 수행하지 않았다.
+
+## Local MLOps Extension
+
+**2026-11-05.** Zoomcamp의 실험 추적과 배치 운영 방식을 로컬 환경에 적용했다. 기존 19개 feature 정책, 모델 구성, 분할과 평가 규칙을 유지한다. 실행 방법은 [로컬 MLOps 문서](mlops.md)에 정리했다.
+
+- 선택 의존성 그룹에 MLflow 3.18.0과 Prefect 3.9.1을 잠갔다. 모델 로더가 검사하는 기존 패키지·런타임 버전은 변경하지 않았다.
+- MLflow는 Train에서 학습한 모델의 Validation 지표와 Train+Validation에서 다시 학습한 배치 ZIP을 한 실행에 기록한다. 모델 등록은 선택할 수 있고, 배치에 사용할 ZIP은 실행자가 지정한다.
+- Docker 이미지는 기존 CLI와 잠금 환경을 패키징한다. Prefect는 로컬 또는 컨테이너 CLI 실행과 배치 출력 검사를 나눠 기록한다. GitHub Actions에는 Ruff, pytest, Docker 빌드와 CLI 진입점 검사를 정의했다.
+- 전체 pytest 40개, Ruff lint·format, 잠금 파일 일관성과 `git diff --check`를 확인했다. 로컬 `v1`으로 합성 명단 5행을 처리했을 때 WSL과 Docker 출력이 바이트 단위로 같았다. 별도 합성 학습으로 MLflow 지표 기록, 레지스트리 모델 로딩 및 ZIP과의 점수 일치를 확인했다.
+- MLflow에 기록한 합성 모델을 Prefect에서 Docker로 실행해 입력·출력 5행과 로컬 CLI 출력 일치를 확인했다. 필수 열 누락 배치에서는 Prefect 작업이 실패하고 기존 결과 파일이 보존됐다.
+- 정기 스케줄, 외부 알림, 클라우드 배포는 후속 운영 범위다. GitHub Actions 원격 실행, 실제 데이터 재학습과 최종 Test 재평가는 수행하지 않았다.

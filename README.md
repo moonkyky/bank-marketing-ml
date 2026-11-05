@@ -151,5 +151,6 @@ uv run --locked ruff check .
 | [scripts/](scripts/) | 데이터 준비와 모니터링 시뮬레이션 |
 | [tests/](tests/) | 모델링과 CLI 검증 |
 | [실험·검증 기록](docs/project-status.md) | 상세 결과와 결정 근거 |
+| [로컬 MLOps 실행](docs/mlops.md) | MLflow 학습 기록과 모델 등록, Prefect를 통한 Docker 배치 실행 |
 
 노트북은 데이터를 준비한 뒤 `uv run jupyter lab`으로 열 수 있다.
