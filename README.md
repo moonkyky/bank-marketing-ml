@@ -10,7 +10,7 @@ CSV 명단을 넣으면 Logistic Regression이 예정된 연락 직전의 정보
 
 ![Gradio 대시보드 시연. 합성 명단 12건을 처리하고 순위를 확인한 뒤 CSV를 내려받는다.](docs/media/dashboard-demo.gif)
 
-합성 명단을 처리해 상위 10건을 확인하고, 전체 결과를 CSV로 내려받는 흐름이다. 필수 열이 누락된 CSV를 넣었을 때는 실행 상태에 원인이 표시된다.
+합성 명단 12건을 처리해 상위 10건을 확인하고, 전체 결과를 CSV로 내려받는 흐름이다.
 
 ### Local Dashboard
 
